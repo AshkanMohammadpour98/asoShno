@@ -70,7 +70,7 @@ export async function getLocalProducts(filters?: {
     specs: p.specs as any,
     categories: p.category ? { name: p.category.name } : undefined,
     brands: p.brand ? { name: p.brand.name } : undefined,
-    variants: p.variants.map(v => ({
+    variants: p.variants.map((v: any) => ({
       id: v.id,
       colorName: v.colorName,
       colorCode: v.colorCode || undefined,
