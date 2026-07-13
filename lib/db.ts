@@ -59,7 +59,7 @@ export async function getLocalProducts(filters?: {
     }
   });
 
-  return products.map(p => ({
+  return products.map((p: any) => ({
     ...p,
     price: String(p.price),
     purchasePrice: p.purchasePrice ? String(p.purchasePrice) : undefined,
