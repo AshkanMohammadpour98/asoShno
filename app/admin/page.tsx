@@ -30,7 +30,7 @@ import {
   createBlogCategory,
   deleteBlogCategory
 } from '@/lib/actions/blog';
-import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory } from '@/lib/types';
+import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
 
 export default function AdminDashboard() {
