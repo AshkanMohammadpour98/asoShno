@@ -1,0 +1,17 @@
+# Liara Ignore File
+node_modules/
+.next/
+.git/
+.idea/
+.vscode/
+.artifacts/
+CLAUDE.md
+*.zip
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables (Handle via Liara Console)
+.env
+.env.local
+.env*.local
