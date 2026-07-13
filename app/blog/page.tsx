@@ -1,17 +1,46 @@
-import React from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getLocalBlogPosts, getLocalBlogCategories } from '@/lib/db';
+import { getBlogPosts, getBlogCategories } from '@/lib/actions/blog';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { BlogPost, BlogCategory } from '@/lib/types';
 
-export default async function BlogPage() {
-  // Fetch live data from PostgreSQL via Prisma (wrapped in getLocal...)
-  const allPosts = (await getLocalBlogPosts()).filter(p => p.status === 'published');
-  const categories = await getLocalBlogCategories();
+export default function BlogPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+  const [allPosts, setAllPosts] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
 
-  // Find featured post, or take the latest one
+  const search = searchParams.get('search') || '';
+  const category = searchParams.get('category') || '';
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      const [postsRes, catRes] = await Promise.all([
+        getBlogPosts({ search, category }),
+        getBlogCategories()
+      ]);
+
+      if (postsRes.success) setAllPosts((postsRes.data || []).filter(p => p.status === 'published'));
+      if (catRes.success) setCategories(catRes.data || []);
+      setIsLoading(false);
+    }
+    loadData();
+  }, [search, category]);
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    router.push(`/blog?${params.toString()}`);
+  };
+
   const featuredPost = allPosts.find(p => p.isFeatured) || allPosts[0];
-  const regularPosts = featuredPost ? allPosts.filter(p => p.id !== featuredPost.id) : allPosts.slice(1);
+  const regularPosts = featuredPost ? allPosts.filter(p => p.id !== featuredPost.id) : allPosts;
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
@@ -26,7 +55,12 @@ export default async function BlogPage() {
           </p>
         </div>
 
-        {allPosts.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="font-black text-muted-foreground">در حال بارگذاری مقالات...</p>
+          </div>
+        ) : allPosts.length > 0 ? (
           <>
             {/* Featured Post (Bento Large) */}
             {featuredPost && (
@@ -61,13 +95,34 @@ export default async function BlogPage() {
                   </div>
                 </Link>
 
-                {/* Categories / Side Bento */}
+                {/* Categories / Search Side Bento */}
                 <div className="lg:col-span-4 grid grid-cols-1 gap-8">
+                   <div className="bento-card bg-card border border-border p-10 flex flex-col gap-8 shadow-sm">
+                      <h3 className="text-xl font-bold text-foreground">جستجو در مقالات</h3>
+                      <input
+                        type="text"
+                        placeholder="دنبال چی می‌گردی؟..."
+                        value={search}
+                        onChange={(e) => updateFilter('search', e.target.value)}
+                        className="w-full h-14 bg-muted/50 rounded-2xl px-6 font-bold text-sm outline-none border-2 border-transparent focus:border-primary transition-all"
+                      />
+                   </div>
+
                    <div className="bento-card bg-foreground text-background p-10 flex flex-col justify-between border-none shadow-xl">
                       <h3 className="text-2xl font-bold mb-8 text-background">دسته‌بندی‌ها</h3>
                       <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => updateFilter('category', '')}
+                          className={`px-5 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-widest ${!category ? 'bg-primary text-primary-foreground' : 'bg-background/10 text-background hover:bg-background/20'}`}
+                        >
+                          همه مقالات
+                        </button>
                          {categories.map(cat => (
-                           <button key={cat.id} className="px-5 py-2.5 rounded-2xl bg-background/10 border border-background/10 text-[10px] font-black hover:bg-background/20 transition-all uppercase tracking-widest text-background">
+                           <button
+                            key={cat.id}
+                            onClick={() => updateFilter('category', cat.name)}
+                            className={`px-5 py-2.5 rounded-2xl text-[10px] font-black transition-all uppercase tracking-widest ${category === cat.name ? 'bg-primary text-primary-foreground' : 'bg-background/10 text-background hover:bg-background/20'}`}
+                           >
                              {cat.name}
                            </button>
                          ))}

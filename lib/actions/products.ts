@@ -49,9 +49,15 @@ function toEnglishDigits(str: string): string {
 /**
  * Products Actions
  */
-export async function getProducts() {
+export async function getProducts(filters?: {
+  search?: string;
+  category?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+}) {
   try {
-    const data = await getLocalProducts();
+    const data = await getLocalProducts(filters);
     return { success: true, data };
   } catch (e) {
     return { success: false, error: 'خطا در دریافت محصولات' };

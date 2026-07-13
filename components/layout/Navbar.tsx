@@ -18,11 +18,15 @@ const navLinks = [
   { name: 'تماس با ما', href: '/contact' },
 ];
 
-const Navbar = ({ settings }: { settings: SiteSettings }) => {
+const Navbar = ({ settings, session }: { settings: SiteSettings, session: any }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+
+  const user = session?.user;
+  const isLoggedIn = !!user;
+  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -73,7 +77,19 @@ const Navbar = ({ settings }: { settings: SiteSettings }) => {
               🛒 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center border-2 border-background">۲</span>
             </button>
             <div className="hidden md:block h-6 w-px bg-border mx-1"></div>
-            <Link href="/login" className="hidden md:flex h-10 items-center px-6 rounded-xl bg-foreground text-background text-xs font-black hover:scale-105 transition-all">ورود</Link>
+
+            {isLoggedIn ? (
+              <Link
+                href={isAdmin ? "/admin" : "/profile"}
+                className="hidden md:flex h-10 items-center px-6 rounded-xl bg-secondary text-foreground text-xs font-black border border-border hover:bg-muted transition-all gap-2"
+              >
+                <span>{isAdmin ? 'پنل مدیریت' : 'حساب کاربری'}</span>
+                <span className="text-lg">👤</span>
+              </Link>
+            ) : (
+              <Link href="/login" className="hidden md:flex h-10 items-center px-6 rounded-xl bg-foreground text-background text-xs font-black hover:scale-105 transition-all">ورود</Link>
+            )}
+
             <Link href="/repair" className="inline-flex h-10 items-center px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">ثبت تعمیر</Link>
           </div>
         </div>

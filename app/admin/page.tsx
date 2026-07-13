@@ -74,6 +74,18 @@ export default function AdminDashboard() {
   const [newAttrName, setNewAttrName] = useState('');
   const [attrCategoryId, setAttrCategoryId] = useState('');
 
+  // Admin List Filters
+  const [listFilters, setListFilters] = useState<{
+    search: string;
+    category: string;
+    brand: string;
+  }>({ search: '', category: '', brand: '' });
+
+  const [blogFilters, setBlogFilters] = useState<{
+    search: string;
+    category: string;
+  }>({ search: '', category: '' });
+
   // Blog State
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
@@ -105,9 +117,13 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchBlogPosts = async () => {
-    const res = await getBlogPosts();
+    const res = await getBlogPosts(blogFilters);
     if (res.success) setBlogPosts(res.data || []);
   };
+
+  useEffect(() => {
+    fetchBlogPosts();
+  }, [blogFilters]);
 
   const fetchBlogCategories = async () => {
     const res = await getBlogCategories();
@@ -120,9 +136,13 @@ export default function AdminDashboard() {
   };
 
   const fetchProducts = async () => {
-    const res = await getProducts();
+    const res = await getProducts(listFilters);
     if (res.success) setProducts(res.data || []);
   };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [listFilters]);
 
   const fetchCategories = async () => {
     const res = await getCategories();
@@ -544,6 +564,49 @@ export default function AdminDashboard() {
                     <button onClick={() => setIsAddingProduct(true)} className="w-full sm:w-auto h-14 sm:h-16 px-10 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl hover:scale-105 transition-all">+ افزودن محصول جدید</button>
                   )}
                 </div>
+
+                {!isAddingProduct && (
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
+                    <div className="flex-1 min-w-[200px] space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">جستجو در لیست</label>
+                      <input
+                        type="text"
+                        placeholder="نام یا توضیح..."
+                        value={listFilters.search}
+                        onChange={(e) => setListFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600"
+                      />
+                    </div>
+                    <div className="w-full sm:w-48 space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">دسته‌بندی</label>
+                      <select
+                        value={listFilters.category}
+                        onChange={(e) => setListFilters(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none"
+                      >
+                        <option value="">همه دسته‌ها</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="w-full sm:w-48 space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">برند</label>
+                      <select
+                        value={listFilters.brand}
+                        onChange={(e) => setListFilters(prev => ({ ...prev, brand: e.target.value }))}
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none"
+                      >
+                        <option value="">همه برندها</option>
+                        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setListFilters({ search: '', category: '', brand: '' })}
+                      className="h-12 px-6 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px]"
+                    >
+                      پاکسازی
+                    </button>
+                  </div>
+                )}
 
                 {!isAddingProduct ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -984,6 +1047,38 @@ export default function AdminDashboard() {
                     <button onClick={() => { setIsAddingPost(true); setEditingPost(null); setPostImagePreview(null); }} className="w-full sm:w-auto h-14 sm:h-16 px-10 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl hover:scale-105 transition-all">+ افزودن مقاله جدید</button>
                   )}
                 </div>
+
+                {!isAddingPost && (
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
+                    <div className="flex-1 min-w-[200px] space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">جستجو در مقالات</label>
+                      <input
+                        type="text"
+                        placeholder="عنوان یا محتوا..."
+                        value={blogFilters.search}
+                        onChange={(e) => setBlogFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600"
+                      />
+                    </div>
+                    <div className="w-full sm:w-48 space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">دسته‌بندی</label>
+                      <select
+                        value={blogFilters.category}
+                        onChange={(e) => setBlogFilters(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none"
+                      >
+                        <option value="">همه دسته‌ها</option>
+                        {blogCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setBlogFilters({ search: '', category: '' })}
+                      className="h-12 px-6 rounded-xl bg-slate-100 text-slate-500 font-black text-[10px]"
+                    >
+                      پاکسازی
+                    </button>
+                  </div>
+                )}
 
                 {!isAddingPost ? (
                   <div className="space-y-6">

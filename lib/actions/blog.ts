@@ -15,9 +15,9 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '../prisma';
 import crypto from 'crypto';
 
-export async function getBlogPosts() {
+export async function getBlogPosts(filters?: { search?: string; category?: string }) {
   try {
-    const data = await getLocalBlogPosts();
+    const data = await getLocalBlogPosts(filters);
     return { success: true, data };
   } catch (error) {
     return { success: false, error: 'خطا در دریافت مقالات' };
@@ -109,7 +109,8 @@ export async function deleteBlogPost(id: string) {
  */
 export async function getBlogCategories() {
   try {
-    const data = await getLocalBlogCategories();
+    const { getMergedBlogCategories } = await import('../db');
+    const data = await getMergedBlogCategories();
     return { success: true, data };
   } catch (error) {
     return { success: false, error: 'خطا در دریافت دسته‌بندی‌ها' };

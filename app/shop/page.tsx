@@ -1,22 +1,25 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import ProductSkeleton from '@/components/shop/ProductSkeleton';
-import { getProducts, getCategories, getBrands } from '@/lib/actions/products';
-import { getPublicImageUrl } from '@/lib/upload-image';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { LocalProduct, LocalCategory, LocalBrand } from '@/lib/types';
 
 export default function ShopPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
+  const [products, setProducts] = useState<LocalProduct[]>([]);
+  const [categories, setCategories] = useState<LocalCategory[]>([]);
+  const [brands, setBrands] = useState<LocalBrand[]>([]);
+
+  // Get filters from URL
+  const search = searchParams.get('search') || '';
+  const category = searchParams.get('category') || '';
+  const brand = searchParams.get('brand') || '';
 
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       const [prodRes, catRes, brandRes] = await Promise.all([
-        getProducts(),
+        getProducts({ search, category, brand }),
         getCategories(),
         getBrands()
       ]);
@@ -28,7 +31,18 @@ export default function ShopPage() {
       setIsLoading(false);
     }
     loadData();
-  }, []);
+  }, [search, category, brand]);
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    router.push(`/shop?${params.toString()}`);
+  };
+
+  const clearFilters = () => {
+    router.push('/shop');
+  };
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
@@ -55,19 +69,45 @@ export default function ShopPage() {
             <div className="bg-card border border-border rounded-[3rem] p-8 shadow-sm">
               <div className="flex items-center justify-between mb-10">
                  <h3 className="text-xl font-bold tracking-tight text-foreground">فیلترهای دقیق</h3>
-                 <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:opacity-70">پاکسازی</button>
+                 <button
+                  onClick={clearFilters}
+                  className="text-[10px] font-black text-primary uppercase tracking-widest hover:opacity-70"
+                 >
+                    پاکسازی
+                 </button>
               </div>
 
               <div className="space-y-10">
+                {/* Search in Shop */}
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">جستجوی متنی</label>
+                  <input
+                    type="text"
+                    placeholder="چی لازم داری؟..."
+                    value={search}
+                    onChange={(e) => updateFilter('search', e.target.value)}
+                    className="w-full h-12 bg-muted/50 rounded-2xl px-6 font-bold text-xs outline-none border-2 border-transparent focus:border-primary"
+                  />
+                </div>
+
                 {/* Brand Filter */}
                 <div>
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">برند</label>
-                  <div className="space-y-4">
-                    {brands.map((brand) => (
-                      <label key={brand.id} className="flex items-center gap-4 group cursor-pointer">
-                        <input type="checkbox" className="w-5 h-5 rounded border-border" />
-                        <span className="text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">{brand.name}</span>
-                      </label>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => updateFilter('brand', '')}
+                      className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${!brand ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                    >
+                      همه برندها
+                    </button>
+                    {brands.map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => updateFilter('brand', b.id)}
+                        className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${brand === b.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {b.name}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -75,12 +115,21 @@ export default function ShopPage() {
                 {/* Category Filter */}
                 <div>
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">دسته‌بندی</label>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => updateFilter('category', '')}
+                      className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${!category ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                    >
+                      همه دسته‌ها
+                    </button>
                     {categories.map((cat) => (
-                      <label key={cat.id} className="flex items-center gap-4 group cursor-pointer">
-                        <input type="checkbox" className="w-5 h-5 rounded border-border" />
-                        <span className="text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">{cat.name}</span>
-                      </label>
+                      <button
+                        key={cat.id}
+                        onClick={() => updateFilter('category', cat.id)}
+                        className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${category === cat.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {cat.name}
+                      </button>
                     ))}
                   </div>
                 </div>

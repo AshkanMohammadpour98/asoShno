@@ -58,6 +58,9 @@ export default async function ProfilePage() {
                     پنل مدیریت
                   </Link>
                 )}
+                <Link href="/" className="w-full h-16 bg-secondary text-foreground rounded-2xl flex items-center justify-center font-black hover:scale-[1.02] transition-all border border-border">
+                  بازگشت به صفحه اصلی
+                </Link>
                 <Link href="/shop" className="w-full h-16 bg-muted text-foreground border border-border rounded-2xl flex items-center justify-center font-black hover:bg-border transition-all">
                   مشاهده فروشگاه
                 </Link>

@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import { getLocalSettings } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 const vazir = localFont({
   src: "../public/fonts/Vazirmatn/Vazirmatn[wght].woff2",
@@ -51,6 +52,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const settings = await getLocalSettings();
+  const session = await auth();
 
   return (
     <html
@@ -60,7 +62,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-vazir bg-background text-foreground transition-colors duration-300">
-        <Navbar settings={settings} />
+        <Navbar settings={settings} session={session} />
         <main className="flex-1">{children}</main>
         <Footer settings={settings} />
         <BottomNavigation />

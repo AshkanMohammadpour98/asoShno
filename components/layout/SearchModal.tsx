@@ -1,7 +1,7 @@
-"use client";
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -9,7 +9,10 @@ interface SearchModalProps {
 }
 
 const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
+  const [searchType, setSearchType] = useState<'shop' | 'blog'>('shop');
 
   useEffect(() => {
     if (isOpen) {
@@ -42,21 +45,51 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
           isOpen ? 'translate-y-0 scale-100' : '-translate-y-10 scale-95'
         }`}
       >
-        <div className="p-6 border-b border-border flex items-center gap-6 bg-secondary/30">
-          <span className="text-3xl opacity-40">🔍</span>
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="جستجو در محصولات و خدمات آسو شنو..."
-            className="flex-1 bg-transparent border-none focus:ring-0 text-xl font-estedad text-foreground placeholder:text-muted-foreground/50 py-4"
-          />
-          <button
-            onClick={onClose}
-            className="h-12 px-6 rounded-2xl bg-muted text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all active:scale-95"
-          >
-            بستن
-          </button>
-        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (query.trim()) {
+              router.push(`/${searchType}?search=${encodeURIComponent(query)}`);
+              onClose();
+            }
+          }}
+          className="p-6 border-b border-border space-y-4 bg-secondary/30"
+        >
+          <div className="flex items-center gap-4 px-2">
+            <button
+              type="button"
+              onClick={() => setSearchType('shop')}
+              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'shop' ? 'bg-primary text-white shadow-lg' : 'bg-muted text-muted-foreground'}`}
+            >
+              محصولات
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchType('blog')}
+              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'blog' ? 'bg-primary text-white shadow-lg' : 'bg-muted text-muted-foreground'}`}
+            >
+              مجله خبری
+            </button>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="text-3xl opacity-40">🔍</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchType === 'shop' ? "جستجو در محصولات آسو شنو..." : "جستجو در مقالات مجله..."}
+              className="flex-1 bg-transparent border-none focus:ring-0 text-xl font-estedad text-foreground placeholder:text-muted-foreground/50 py-4"
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-12 px-6 rounded-2xl bg-muted text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all active:scale-95"
+            >
+              بستن
+            </button>
+          </div>
+        </form>
 
         <div className="max-h-[65vh] overflow-y-auto p-8 no-scrollbar text-right" dir="rtl">
           <div className="space-y-10">
@@ -101,11 +134,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 
         <div className="p-6 bg-secondary border-t border-border flex justify-center">
            <Link
-             href="/shop"
+             href={`/${searchType}`}
              onClick={onClose}
              className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:opacity-70 transition-opacity"
            >
-             مشاهده تمام نتایج جستجو در ویترین
+             مشاهده تمام نتایج {searchType === 'shop' ? 'در ویترین' : 'در مجله'}
            </Link>
         </div>
       </div>

@@ -17,8 +17,38 @@ import {
 /**
  * Products CRUD
  */
-export async function getLocalProducts() {
+export async function getLocalProducts(filters?: {
+  search?: string;
+  category?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+}) {
+  const where: any = {};
+
+  if (filters?.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: 'insensitive' } },
+      { description: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (filters?.category) {
+    where.categoryId = filters.category;
+  }
+
+  if (filters?.brand) {
+    where.brandId = filters.brand;
+  }
+
+  if (filters?.minPrice || filters?.maxPrice) {
+    where.price = {};
+    if (filters.minPrice) where.price.gte = filters.minPrice;
+    if (filters.maxPrice) where.price.lte = filters.maxPrice;
+  }
+
   const products = await prisma.product.findMany({
+    where,
     include: {
       category: true,
       brand: true
@@ -275,11 +305,32 @@ export async function updateLocalSettings(settings: SiteSettings) {
 /**
  * Blog Posts CRUD
  */
-export async function getLocalBlogPosts() {
+export async function getLocalBlogPosts(filters?: { search?: string; category?: string }) {
+  const where: any = {};
+
+  if (filters?.search) {
+    where.OR = [
+      { title: { contains: filters.search, mode: 'insensitive' } },
+      { content: { contains: filters.search, mode: 'insensitive' } },
+      { excerpt: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (filters?.category) {
+    where.category = { name: filters.category };
+  }
+
   const posts = await prisma.blogPost.findMany({
+    where,
     include: { category: true },
     orderBy: { createdAt: 'desc' }
   });
+
+  // Fallback Logic: If no category is assigned, we could potentially map it differently
+  // but for now we follow the requirement: use ProductCategory names as fallback if needed.
+  // Actually, the requirement says: "اگر هیچ دسته‌بندی مخصوص مجله‌ای در ادمین تعریف نشده بود، سیستم بتواند به عنوان جایگزین از دسته‌بندی محصولات استفاده کند"
+  // This usually means when DISPLAYING categories in a list/dropdown, not necessarily for individual posts.
+  // I will implement a helper to fetch "Merged Categories" if needed.
 
   return posts.map(p => ({
     ...p,
@@ -288,6 +339,21 @@ export async function getLocalBlogPosts() {
     updatedAt: p.updatedAt.toISOString(),
     tags: p.tags || []
   })) as unknown as BlogPost[];
+}
+
+/**
+ * Helper to fetch Blog Categories with fallback to Product Categories
+ */
+export async function getMergedBlogCategories() {
+  const blogCats = await prisma.blogCategory.findMany();
+
+  if (blogCats.length > 0) {
+    return blogCats.map(c => ({ id: c.id, name: c.name })) as BlogCategory[];
+  }
+
+  // Fallback to Product Categories
+  const productCats = await prisma.category.findMany();
+  return productCats.map(c => ({ id: c.id, name: c.name })) as BlogCategory[];
 }
 
 export async function addLocalBlogPost(post: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt'>) {
