@@ -27,10 +27,13 @@ export type ProductInput = {
   name: string;
   description?: string;
   price: string | number;
+  purchasePrice?: string | number;
+  shippingType: 'FREE' | 'PAID';
   category_id?: string;
   brand_id?: string;
   main_image: File | string | null;
   gallery_images: (File | string | null)[];
+  variants?: { colorName: string, colorCode?: string, stock: number }[];
 
   // Dynamic specs
   specs?: { key: string, value: string }[];

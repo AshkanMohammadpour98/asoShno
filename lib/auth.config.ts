@@ -34,6 +34,7 @@ export const authConfig = {
       const role = (auth?.user as any)?.role;
       const isAdminRoute = nextUrl.pathname.startsWith("/admin");
       const isProfileRoute = nextUrl.pathname.startsWith("/profile");
+      const isCheckoutRoute = nextUrl.pathname.startsWith("/checkout");
       const isAuthPage = nextUrl.pathname === "/login" || nextUrl.pathname === "/signup";
 
       // 1. If trying to access admin area, must be logged in AND be an ADMIN
@@ -42,8 +43,8 @@ export const authConfig = {
         if (role !== "ADMIN") return Response.redirect(new URL("/", nextUrl));
       }
 
-      // 2. If trying to access profile, must be logged in
-      if (isProfileRoute) {
+      // 2. If trying to access profile or checkout, must be logged in
+      if (isProfileRoute || isCheckoutRoute) {
         if (!isLoggedIn) return false;
       }
 

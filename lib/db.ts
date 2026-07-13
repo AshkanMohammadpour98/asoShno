@@ -51,7 +51,8 @@ export async function getLocalProducts(filters?: {
     where,
     include: {
       category: true,
-      brand: true
+      brand: true,
+      variants: true
     },
     orderBy: {
       createdAt: 'desc'
@@ -61,13 +62,20 @@ export async function getLocalProducts(filters?: {
   return products.map(p => ({
     ...p,
     price: String(p.price),
+    purchasePrice: p.purchasePrice ? String(p.purchasePrice) : undefined,
     category_id: p.categoryId,
     brand_id: p.brandId,
     created_at: p.createdAt.toISOString(),
     updated_at: p.updatedAt.toISOString(),
     specs: p.specs as any,
     categories: p.category ? { name: p.category.name } : undefined,
-    brands: p.brand ? { name: p.brand.name } : undefined
+    brands: p.brand ? { name: p.brand.name } : undefined,
+    variants: p.variants.map(v => ({
+      id: v.id,
+      colorName: v.colorName,
+      colorCode: v.colorCode || undefined,
+      stock: v.stock
+    }))
   })) as unknown as LocalProduct[];
 }
 
@@ -77,12 +85,22 @@ export async function addLocalProduct(product: Omit<LocalProduct, 'id' | 'create
       name: product.name,
       description: product.description,
       price: parseFloat(product.price) || 0,
+      purchasePrice: product.purchasePrice ? parseFloat(product.purchasePrice) : undefined,
+      shippingType: product.shippingType,
       images: product.images,
       specs: product.specs as any,
       condition: product.condition,
       slug: product.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
       category: product.category_id ? { connect: { id: product.category_id } } : undefined,
-      brand: product.brand_id ? { connect: { id: product.brand_id } } : undefined
+      brand: product.brand_id ? { connect: { id: product.brand_id } } : undefined,
+      variants: {
+        create: product.variants?.map(v => ({
+          colorName: v.colorName,
+          colorCode: v.colorCode,
+          stock: v.stock
+        }))
+      },
+      stock: product.variants?.reduce((sum, v) => sum + v.stock, 0) || 0
     }
   });
 
@@ -96,17 +114,34 @@ export async function addLocalProduct(product: Omit<LocalProduct, 'id' | 'create
 }
 
 export async function updateLocalProduct(id: string, product: Partial<LocalProduct>) {
+  // First, delete existing variants for this product to replace them
+  if (product.variants) {
+    await prisma.productVariant.deleteMany({
+      where: { productId: id }
+    });
+  }
+
   const updatedProduct = await prisma.product.update({
     where: { id },
     data: {
       name: product.name,
       description: product.description,
       price: product.price ? parseFloat(product.price) : undefined,
+      purchasePrice: product.purchasePrice ? parseFloat(product.purchasePrice) : undefined,
+      shippingType: product.shippingType,
       images: product.images,
       specs: product.specs as any,
       condition: product.condition,
       category: product.category_id ? { connect: { id: product.category_id } } : undefined,
-      brand: product.brand_id ? { connect: { id: product.brand_id } } : undefined
+      brand: product.brand_id ? { connect: { id: product.brand_id } } : undefined,
+      variants: product.variants ? {
+        create: product.variants.map(v => ({
+          colorName: v.colorName,
+          colorCode: v.colorCode,
+          stock: v.stock
+        }))
+      } : undefined,
+      stock: product.variants ? product.variants.reduce((sum, v) => sum + v.stock, 0) : undefined
     }
   });
 

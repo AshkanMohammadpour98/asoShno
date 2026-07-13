@@ -182,9 +182,14 @@ export default function ShopPage() {
                     <div className="px-3 flex-1 flex flex-col">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]"></span>
-                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">موجود در انبار</span>
+                           <span className={`h-1.5 w-1.5 rounded-full ${product.stock > 0 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]' : 'bg-red-500'}`}></span>
+                           <span className={`text-[10px] font-black uppercase tracking-widest ${product.stock > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {product.stock > 0 ? 'موجود در انبار' : 'ناموجود'}
+                           </span>
                         </div>
+                        {product.shippingType === 'FREE' && (
+                          <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-[8px] font-black">ارسال رایگان</span>
+                        )}
                       </div>
 
                       <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors truncate mb-1">{product.name}</h3>

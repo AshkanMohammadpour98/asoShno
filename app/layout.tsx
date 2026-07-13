@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import { getLocalSettings } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { CartProvider } from "@/components/providers/CartProvider";
 
 const vazir = localFont({
   src: "../public/fonts/Vazirmatn/Vazirmatn[wght].woff2",
@@ -62,10 +63,12 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-vazir bg-background text-foreground transition-colors duration-300">
-        <Navbar settings={settings} session={session} />
-        <main className="flex-1">{children}</main>
-        <Footer settings={settings} />
-        <BottomNavigation />
+        <CartProvider>
+          <Navbar settings={settings} session={session} />
+          <main className="flex-1">{children}</main>
+          <Footer settings={settings} />
+          <BottomNavigation />
+        </CartProvider>
       </body>
     </html>
   );

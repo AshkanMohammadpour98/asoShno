@@ -74,7 +74,13 @@ export async function registerUser(prevState: ActionState, formData: FormData): 
 
 export async function authenticate(prevState: string | undefined, formData: FormData) {
   try {
-    await signIn("credentials", Object.fromEntries(formData));
+    const rawData = Object.fromEntries(formData);
+    const redirectTo = (rawData.callbackUrl as string) || (rawData.role === 'ADMIN' ? '/admin' : '/profile');
+
+    await signIn("credentials", {
+      ...rawData,
+      redirectTo
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {

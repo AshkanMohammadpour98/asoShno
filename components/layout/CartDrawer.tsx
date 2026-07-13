@@ -1,7 +1,6 @@
-"use client";
-import React from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
+import { useCart } from '../providers/CartProvider';
+import { getPublicImageUrl } from '@/lib/upload-image';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -9,10 +8,9 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const cartItems = [
-    { id: 1, name: "MacBook Pro M3 Max", price: "۱۸۵,۰۰۰,۰۰۰", qty: 1, image: "/hero/HeroImageJul.png" },
-    { id: 2, name: "Asus VivoBook 15", price: "۲۸,۹۰۰,۰۰۰", qty: 1, image: "/hero/HeroImageJul.png" },
-  ];
+  const { items, updateQty, removeItem, totalAmount, totalCount } = useCart();
+
+  const hasFreeShipping = items.some(i => i.shippingType === 'FREE');
 
   return (
     <>
@@ -30,7 +28,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             <div className="flex items-center gap-4">
               <span className="text-2xl sm:text-3xl font-estedad text-foreground tracking-tight">سبد خرید</span>
               <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-                {cartItems.length} کالا
+                {totalCount} کالا
               </span>
             </div>
             <button
@@ -42,24 +40,37 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Items List */}
           <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 no-scrollbar">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex gap-4 sm:gap-6 group">
-                <Link href="/shop/product-details" onClick={onClose} className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-[1.5rem] bg-secondary border border-border overflow-hidden flex-shrink-0 flex items-center justify-center shadow-sm">
-                  <Image src={item.image} alt={item.name} width={80} height={80} className="object-contain p-2 transition-transform group-hover:scale-110" />
+            {items.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-40">
+                <span className="text-7xl">🛒</span>
+                <p className="font-black text-lg uppercase tracking-widest">سبد خرید شما خالی است</p>
+              </div>
+            ) : items.map((item) => (
+              <div key={`${item.id}-${item.colorName}`} className="flex gap-4 sm:gap-6 group">
+                <Link href={`/shop/product/${item.id}`} onClick={onClose} className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-[1.5rem] bg-secondary border border-border overflow-hidden flex-shrink-0 flex items-center justify-center shadow-sm">
+                  <Image src={getPublicImageUrl(item.image)} alt={item.name} width={80} height={80} className="object-contain p-2 transition-transform group-hover:scale-110" />
                 </Link>
                 <div className="flex-1 flex flex-col justify-between py-1">
-                  <Link href="/shop/product-details" onClick={onClose}>
-                    <h4 className="font-estedad text-lg sm:text-xl text-foreground group-hover:text-primary transition-colors leading-tight mb-2 tracking-tight">{item.name}</h4>
+                  <Link href={`/shop/product/${item.id}`} onClick={onClose}>
+                    <h4 className="font-estedad text-lg sm:text-xl text-foreground group-hover:text-primary transition-colors leading-tight mb-1 tracking-tight">{item.name}</h4>
+                    {item.colorName && (
+                      <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{item.colorName}</p>
+                    )}
                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Original Stock 🇦🇪</p>
                   </Link>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="font-black text-base sm:text-lg text-foreground">{item.price}</span>
+                    <span className="font-black text-base sm:text-lg text-foreground">{item.price.toLocaleString()} تومان</span>
                     <div className="flex items-center gap-4 bg-muted rounded-xl px-3 py-1.5 border border-border">
-                      <button className="text-muted-foreground hover:text-foreground font-black transition-colors">-</button>
+                      <button
+                        onClick={() => updateQty(item.id, item.qty - 1, item.colorName)}
+                        className="text-muted-foreground hover:text-foreground font-black transition-colors"
+                      >-</button>
                       <span className="text-[10px] font-black text-foreground">{item.qty}</span>
-                      <button className="text-muted-foreground hover:text-foreground font-black transition-colors">+</button>
+                      <button
+                        onClick={() => updateQty(item.id, item.qty + 1, item.colorName)}
+                        className="text-muted-foreground hover:text-foreground font-black transition-colors"
+                      >+</button>
                     </div>
                   </div>
                 </div>
@@ -72,16 +83,20 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground font-bold">جمع کل اقلام:</span>
-                <span className="font-black text-foreground tracking-tight">۲۱۳,۹۰۰,۰۰۰ تومان</span>
+                <span className="font-black text-foreground tracking-tight">{totalAmount.toLocaleString()} تومان</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground font-bold">هزینه ارسال:</span>
-                <span className="text-emerald-600 font-black uppercase tracking-widest text-[10px]">رایگان (بیمه شده)</span>
+                {hasFreeShipping ? (
+                  <span className="text-emerald-600 font-black uppercase tracking-widest text-[10px]">رایگان (بیمه شده)</span>
+                ) : (
+                  <span className="text-orange-500 font-black uppercase tracking-widest text-[10px]">نامعلوم (طبق توافق)</span>
+                )}
               </div>
               <div className="pt-6 border-t border-border flex justify-between items-end">
                 <span className="font-estedad text-2xl text-foreground">مبلغ نهایی</span>
                 <div className="text-left" dir="ltr">
-                  <span className="font-black text-2xl sm:text-3xl text-primary block leading-none">۲۱۳,۹۰۰,۰۰۰</span>
+                  <span className="font-black text-2xl sm:text-3xl text-primary block leading-none">{totalAmount.toLocaleString()}</span>
                   <small className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2 block">Toman</small>
                 </div>
               </div>

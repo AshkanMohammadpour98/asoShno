@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import CartDrawer from './CartDrawer';
 import SearchModal from './SearchModal';
 import ThemeToggle from './ThemeToggle';
+import { useCart } from '../providers/CartProvider';
 import type { SiteSettings } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
 
@@ -19,6 +20,7 @@ const navLinks = [
 ];
 
 const Navbar = ({ settings, session }: { settings: SiteSettings, session: any }) => {
+  const { totalCount } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -74,7 +76,7 @@ const Navbar = ({ settings, session }: { settings: SiteSettings, session: any })
             <button onClick={() => setIsSearchOpen(true)} className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">🔍</button>
             <ThemeToggle />
             <button onClick={() => setIsCartOpen(true)} className="relative h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">
-              🛒 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center border-2 border-background">۲</span>
+              🛒 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center border-2 border-background">{totalCount}</span>
             </button>
             <div className="hidden md:block h-6 w-px bg-border mx-1"></div>
 

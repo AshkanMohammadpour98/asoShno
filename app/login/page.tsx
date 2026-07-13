@@ -1,9 +1,10 @@
-"use client";
-import React, { useState, useActionState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { authenticate } from '@/lib/actions/auth-actions';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '';
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined);
 
@@ -21,6 +22,7 @@ export default function LoginPage() {
           </div>
 
           <form action={dispatch} className="space-y-8">
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
             <div>
               <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-3 mr-4">شماره همراه</label>
               <input

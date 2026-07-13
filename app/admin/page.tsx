@@ -54,6 +54,9 @@ export default function AdminDashboard() {
   const [galleryImages, setGalleryImages] = useState<(File | string | null)[]>([null, null, null]);
   const [galleryPreviews, setGalleryPreviews] = useState<(string | null)[]>([null, null, null]);
 
+  // Variants State
+  const [variants, setVariants] = useState<LocalProductVariant[]>([{ colorName: '', stock: 0 }]);
+
   // Dynamic Specs State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [dynamicSpecs, setDynamicSpecs] = useState<{key: string, value: string}[]>([]);
@@ -215,8 +218,24 @@ export default function AdminDashboard() {
     }
     setGalleryPreviews(previews);
     setGalleryImages(images);
+
+    setVariants(product.variants && product.variants.length > 0 ? product.variants : [{ colorName: '', stock: 0 }]);
     // Scroll to top of form
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddVariant = () => {
+    setVariants(prev => [...prev, { colorName: '', stock: 0 }]);
+  };
+
+  const updateVariant = (index: number, field: keyof LocalProductVariant, val: any) => {
+    const newVariants = [...variants];
+    (newVariants[index] as any)[field] = field === 'stock' ? Number(val) : val;
+    setVariants(newVariants);
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddCustomSpec = () => {
@@ -245,8 +264,11 @@ export default function AdminDashboard() {
       category_id: formData.get('category_id') as string,
       brand_id: formData.get('brand_id') as string,
       condition: formData.get('condition') as string,
+      purchasePrice: formData.get('purchasePrice') as string,
+      shippingType: formData.get('shippingType') as 'FREE' | 'PAID',
       main_image: mainImage,
       gallery_images: galleryImages,
+      variants: variants.filter(v => v.colorName),
       specs: dynamicSpecs.filter(s => s.key && s.value)
     };
 
@@ -273,6 +295,7 @@ export default function AdminDashboard() {
     setMainImagePreview(null);
     setGalleryImages([null, null, null]);
     setGalleryPreviews([null, null, null]);
+    setVariants([{ colorName: '', stock: 0 }]);
     setEditingProduct(null);
     setDynamicSpecs([]);
     setSelectedCategoryId('');
@@ -626,8 +649,24 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <h4 className="font-black text-lg text-slate-800 dark:text-white truncate">{prod.name}</h4>
-                        <div className="flex justify-between items-center mt-auto">
-                          <span className="font-black text-indigo-600 text-sm sm:text-base">{Number(prod.price).toLocaleString()} تومان</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between text-[10px] font-bold">
+                            <span className="text-slate-400">قیمت فروش:</span>
+                            <span className="text-indigo-600">{Number(prod.price).toLocaleString()} تومان</span>
+                          </div>
+                          {prod.purchasePrice && (
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span className="text-red-400">قیمت خرید:</span>
+                              <span className="text-red-500">{Number(prod.purchasePrice).toLocaleString()} تومان</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-[10px] font-bold">
+                            <span className="text-slate-400">موجودی کل:</span>
+                            <span className={prod.stock > 0 ? "text-emerald-500" : "text-red-500"}>{prod.stock} عدد</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-auto pt-4 border-t border-slate-50 dark:border-slate-800">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{prod.categories?.name}</span>
                           <div className="flex gap-2">
                              <button onClick={() => handleEditButtonClick(prod)} className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center hover:bg-indigo-50 transition-colors">✏️</button>
                              <button onClick={() => { if(confirm('آیا از حذف این محصول اطمینان دارید؟')) deleteProduct(prod.id).then(fetchProducts) }} className="h-10 w-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors">🗑️</button>
@@ -660,8 +699,19 @@ export default function AdminDashboard() {
                                 <input type="text" name="name" required defaultValue={editingProduct?.name} className="w-full h-14 sm:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black border-2 border-transparent focus:border-indigo-600 outline-none" />
                              </div>
                              <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase mr-2">قیمت (تومان)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase mr-2">قیمت فروش (تومان)</label>
                                 <input type="text" name="price" required defaultValue={editingProduct?.price} className="w-full h-14 sm:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black border-2 border-transparent focus:border-indigo-600 outline-none" />
+                             </div>
+                             <div className="space-y-3">
+                                <label className="text-[10px] font-black text-red-400 uppercase mr-2 italic">قیمت خرید (فقط برای ادمین)</label>
+                                <input type="text" name="purchasePrice" defaultValue={editingProduct?.purchasePrice} className="w-full h-14 sm:h-16 bg-red-50/30 dark:bg-red-900/10 rounded-2xl px-6 font-black border-2 border-transparent focus:border-red-500 outline-none" />
+                             </div>
+                             <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase mr-2">وضعیت هزینه ارسال</label>
+                                <select name="shippingType" required defaultValue={editingProduct?.shippingType || 'PAID'} className="w-full h-14 sm:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black border-2 border-transparent focus:border-indigo-600 outline-none appearance-none">
+                                   <option value="PAID">برعهده مشتری (نامعلوم)</option>
+                                   <option value="FREE">رایگان (بیمه شده)</option>
+                                </select>
                              </div>
                              <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase mr-2">دسته‌بندی</label>
@@ -747,11 +797,55 @@ export default function AdminDashboard() {
                         )}
                       </div>
 
-                      {/* --- SECTION 3: DYNAMIC SPECS --- */}
+                      {/* --- SECTION 3: VARIANTS & STOCK --- */}
+                      <div className="border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden">
+                        <button type="button" onClick={() => toggleSection('variants')} className="w-full flex items-center justify-between p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 transition-colors">
+                           <span className="font-black text-slate-900 dark:text-white flex items-center gap-3 text-sm sm:text-base text-right">
+                              <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs italic">03</span>
+                              تنوع رنگ و موجودی انبار
+                           </span>
+                           <span className="text-slate-400 text-xs">{openSections.includes('variants') ? '▲' : '▼'}</span>
+                        </button>
+                        {openSections.includes('variants') && (
+                          <div className="p-5 sm:p-8 space-y-6">
+                             <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                                {variants.map((variant, i) => (
+                                  <div key={i} className="flex gap-4 items-end group animate-fade-in bg-slate-50/50 p-4 rounded-2xl border border-slate-100 relative">
+                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-slate-400 uppercase">نام رنگ</label>
+                                          <input
+                                            placeholder="مثلا: خاکستری فضایی"
+                                            value={variant.colorName}
+                                            onChange={(e) => updateVariant(i, 'colorName', e.target.value)}
+                                            className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-black text-xs border border-slate-200 focus:border-indigo-600 outline-none"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-slate-400 uppercase">تعداد موجودی</label>
+                                          <input
+                                            type="number"
+                                            placeholder="تعداد..."
+                                            value={variant.stock}
+                                            onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                                            className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-black text-xs border border-slate-200 focus:border-indigo-600 outline-none"
+                                          />
+                                        </div>
+                                     </div>
+                                     <button type="button" onClick={() => removeVariant(i)} className="h-12 w-12 flex-shrink-0 rounded-xl bg-red-50 text-red-500 flex items-center justify-center lg:opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                  </div>
+                                ))}
+                             </div>
+                             <button type="button" onClick={handleAddVariant} className="w-full h-14 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 text-slate-400 font-black text-xs hover:border-indigo-600 hover:text-indigo-600 transition-all">+ افزودن رنگ و موجودی جدید</button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* --- SECTION 4: DYNAMIC SPECS --- */}
                       <div className="border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden">
                         <button type="button" onClick={() => toggleSection('specs')} className="w-full flex items-center justify-between p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 transition-colors">
                            <span className="font-black text-slate-900 dark:text-white flex items-center gap-3 text-sm sm:text-base text-right">
-                              <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs italic">03</span>
+                              <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs italic">04</span>
                               مشخصات فنی و ویژگی‌های هوشمند
                            </span>
                            <span className="text-slate-400 text-xs">{openSections.includes('specs') ? '▲' : '▼'}</span>
@@ -789,11 +883,11 @@ export default function AdminDashboard() {
                         )}
                       </div>
 
-                      {/* --- SECTION 4: DESCRIPTION --- */}
+                      {/* --- SECTION 5: DESCRIPTION --- */}
                       <div className="border border-slate-100 dark:border-slate-800 rounded-3xl overflow-hidden">
                         <button type="button" onClick={() => toggleSection('desc')} className="w-full flex items-center justify-between p-5 sm:p-6 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 transition-colors">
                            <span className="font-black text-slate-900 dark:text-white flex items-center gap-3 text-sm sm:text-base text-right">
-                              <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs italic">04</span>
+                              <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs italic">05</span>
                               توضیحات و بررسی محصول
                            </span>
                            <span className="text-slate-400 text-xs">{openSections.includes('desc') ? '▲' : '▼'}</span>

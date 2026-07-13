@@ -14,11 +14,20 @@ export interface LocalAttribute {
   category_id: string;
 }
 
+export interface LocalProductVariant {
+  id?: string;
+  colorName: string;
+  colorCode?: string;
+  stock: number;
+}
+
 export interface LocalProduct {
   id: string;
   name: string;
   description?: string;
   price: string;
+  purchasePrice?: string; // مخصوص ادمین
+  shippingType: 'FREE' | 'PAID';
   category_id?: string;
   brand_id?: string;
   images: string[];
@@ -28,6 +37,8 @@ export interface LocalProduct {
   condition?: string;
   categories?: { name: string };
   brands?: { name: string };
+  variants?: LocalProductVariant[];
+  stock: number; // کل موجودی
 }
 
 export interface SiteSettings {

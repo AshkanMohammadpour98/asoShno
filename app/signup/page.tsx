@@ -1,7 +1,5 @@
-"use client";
-import React, { useState, useActionState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { registerUser, type ActionState } from '@/lib/actions/auth-actions';
 
 const initialState: ActionState = {
@@ -11,6 +9,8 @@ const initialState: ActionState = {
 };
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '';
   const [showPassword, setShowPassword] = useState(false);
   const [state, dispatch] = useActionState(registerUser, initialState);
   const router = useRouter();
@@ -18,10 +18,10 @@ export default function SignupPage() {
   useEffect(() => {
     if (state?.success) {
       setTimeout(() => {
-        router.push('/login');
+        router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       }, 2000);
     }
-  }, [state?.success, router]);
+  }, [state?.success, router, callbackUrl]);
 
   return (
     <div className="bg-background min-h-screen flex items-center justify-center overflow-hidden py-20 px-4 transition-colors duration-300">
@@ -120,7 +120,7 @@ export default function SignupPage() {
           <div className="mt-8 pt-8 border-t border-border text-center space-y-4">
             <p className="text-sm font-bold text-muted-foreground">
               قبلاً ثبت‌نام کرده‌اید؟{' '}
-              <Link href="/login" className="text-emerald-600 hover:underline">وارد شوید</Link>
+              <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-emerald-600 hover:underline">وارد شوید</Link>
             </p>
             <Link href="/" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors block text-center">
               بازگشت به صفحه اصلی

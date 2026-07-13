@@ -3,21 +3,30 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getProductById } from '@/lib/actions/products';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { useCart } from '@/components/providers/CartProvider';
+import type { LocalProduct, LocalProductVariant } from '@/lib/types';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [product, setProduct] = useState<any>(null);
+  const router = useRouter();
+  const { addItem } = useCart();
+  const [product, setProduct] = useState<LocalProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<LocalProductVariant | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
       const { id } = await params;
       const result = await getProductById(id);
       if (result.success && result.data) {
-        setProduct(result.data);
+        setProduct(result.data as LocalProduct);
+        if (result.data.variants && result.data.variants.length > 0) {
+          setSelectedVariant(result.data.variants[0]);
+        }
       } else {
         setProduct(null);
       }
@@ -112,14 +121,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Info Section */}
-          <div className="lg:col-span-5 space-y-12">
+          <div className="lg:col-span-5 space-y-10">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"></span>
-                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">آماده ارسال فوری از انبار</span>
+                <span className={`h-2 w-2 rounded-full ${selectedVariant?.stock ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></span>
+                <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${selectedVariant?.stock ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {selectedVariant ? (selectedVariant.stock > 0 ? `آماده ارسال فوری (${selectedVariant.stock} عدد در انبار)` : 'ناموجود در انبار') : 'درحال بررسی موجودی...'}
+                </span>
                 {product.condition && (
                   <>
-                    <span className="h-1 w-1 rounded-full bg-slate-300"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
                     <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800/50">
                       وضعیت: {product.condition}
                     </span>
@@ -127,12 +138,34 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
               <h1 className="text-4xl lg:text-6xl font-estedad mb-6 leading-[1.1] text-foreground tracking-tight">{product.name}</h1>
-              <p className="text-muted-foreground leading-relaxed text-base lg:text-lg font-medium whitespace-pre-line">
+              <p className="text-muted-foreground leading-relaxed text-base lg:text-lg font-medium whitespace-pre-line line-clamp-4">
                 {product.description || 'توضیحاتی برای این محصول وارد نشده است.'}
               </p>
             </div>
 
-            <div className="bg-card border border-border rounded-[3rem] p-10 space-y-8 shadow-sm">
+            {/* Variant Selection */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-6">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-1">انتخاب تنوع محصول (رنگ)</label>
+                <div className="flex flex-wrap gap-4">
+                  {product.variants.map((v, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedVariant(v)}
+                      className={`px-6 py-3 rounded-2xl border-2 transition-all font-bold text-sm ${
+                        selectedVariant?.colorName === v.colorName
+                        ? 'border-primary bg-primary/5 text-primary ring-4 ring-primary/5'
+                        : 'border-border text-muted-foreground hover:border-primary/30'
+                      }`}
+                    >
+                      {v.colorName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-card border border-border rounded-[3rem] p-10 space-y-8 shadow-sm relative overflow-hidden">
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">قیمت نهایی محصول</p>
@@ -140,14 +173,44 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     {displayPrice} <small className="text-sm font-normal mr-1 text-muted-foreground">تومان</small>
                   </div>
                 </div>
-                <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-primary/20">Direct Import</div>
+                <div className="flex flex-col items-end gap-2">
+                   <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-primary/20">Original Stock</div>
+                   {product.shippingType === 'FREE' ? (
+                     <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">✈️ ارسال رایگان و بیمه شده</span>
+                   ) : (
+                     <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">✈️ هزینه ارسال: طبق توافق</span>
+                   )}
+                </div>
               </div>
 
               <div className="space-y-4">
-                <Link href="/checkout" className="w-full h-18 rounded-2xl bg-primary text-primary-foreground font-black text-lg shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4">
-                  <span className="text-2xl">🛒</span>
-                  ادامه جهت تسویه حساب
-                </Link>
+                <button
+                  onClick={() => {
+                    if (!selectedVariant || selectedVariant.stock <= 0) return;
+                    addItem({
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.images[0] || '/logo/logo.png',
+                      qty: 1,
+                      colorName: selectedVariant.colorName,
+                      shippingType: product.shippingType
+                    });
+                    setIsAdded(true);
+                    setTimeout(() => setIsAdded(false), 2000);
+                  }}
+                  disabled={!selectedVariant || selectedVariant.stock <= 0}
+                  className={`w-full h-20 rounded-[2rem] font-black text-lg shadow-2xl transition-all flex items-center justify-center gap-4 ${
+                    isAdded
+                    ? 'bg-emerald-500 text-white'
+                    : (!selectedVariant || selectedVariant.stock <= 0)
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                      : 'bg-primary text-primary-foreground shadow-primary/30 hover:scale-[1.02] active:scale-95'
+                  }`}
+                >
+                  <span className="text-2xl">{isAdded ? '✅' : '🛒'}</span>
+                  {isAdded ? 'به سبد خرید اضافه شد' : 'افزودن به سبد خرید'}
+                </button>
                 <Link href="https://wa.me/989143421641" target="_blank" className="w-full h-18 rounded-2xl border-2 border-border bg-background flex items-center justify-center gap-4 font-black text-sm text-foreground hover:bg-muted transition-all active:scale-95 shadow-sm">
                   <span>💬</span>
                   مشاوره تخصصی در واتس‌اپ
