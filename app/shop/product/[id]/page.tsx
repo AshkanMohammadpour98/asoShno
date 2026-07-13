@@ -190,7 +190,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     addItem({
                       id: product.id,
                       name: product.name,
-                      price: product.price,
+                      price: Number(product.price),
                       image: product.images[0] || '/logo/logo.png',
                       qty: 1,
                       colorName: selectedVariant.colorName,
