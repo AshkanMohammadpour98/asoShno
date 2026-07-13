@@ -5,7 +5,7 @@
   "build": {
     "location": "iran"
   },
-  "next": {
+  "scripts": {
     "build": "npx prisma generate && next build"
   },
   "disks": []
