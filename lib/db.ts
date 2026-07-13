@@ -318,31 +318,6 @@ export async function getLocalSettings(): Promise<SiteSettings> {
     return defaultSettings;
   }
 }
-    },
-    contact: {
-      email: record.contactEmail || s?.contact?.email || defaultSettings.contact.email,
-      phone: record.phoneNumber || s?.contact?.phone || defaultSettings.contact.phone,
-      address: s?.contact?.address || defaultSettings.contact.address,
-      instagram: s?.contact?.instagram || defaultSettings.contact.instagram,
-      telegram: s?.contact?.telegram || defaultSettings.contact.telegram,
-      whatsapp: s?.contact?.whatsapp || defaultSettings.contact.whatsapp
-    },
-    home: {
-      heroTitle: s?.home?.heroTitle || defaultSettings.home.heroTitle,
-      heroSubtitle: s?.home?.heroSubtitle || defaultSettings.home.heroSubtitle,
-      heroButtonText: s?.home?.heroButtonText || defaultSettings.home.heroButtonText,
-      heroButtonLink: s?.home?.heroButtonLink || defaultSettings.home.heroButtonLink,
-      heroImage: s?.home?.heroImage || record.footerText /* legacy mapping if any */ || defaultSettings.home.heroImage,
-      banners: s?.home?.banners || defaultSettings.home.banners
-    },
-    footer: {
-      aboutText: record.footerText || s?.footer?.aboutText || defaultSettings.footer.aboutText,
-      copyright: s?.footer?.copyright || defaultSettings.footer.copyright
-    },
-    pages: s?.pages || defaultSettings.pages,
-    features: s?.features || defaultSettings.features
-  } as SiteSettings;
-}
 
 export async function updateLocalSettings(settings: SiteSettings) {
   await prisma.siteSettings.upsert({
