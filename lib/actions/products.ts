@@ -226,11 +226,15 @@ export async function createProduct(input: ProductInput) {
       name: input.name,
       description: input.description,
       price: cleanPrice,
+      purchasePrice: input.purchasePrice ? String(input.purchasePrice) : undefined,
+      shippingType: input.shippingType,
       category_id: input.category_id,
       brand_id: input.brand_id,
       images: imageKeys,
       specs: input.specs,
-      condition: input.condition
+      condition: input.condition,
+      variants: input.variants,
+      stock: input.variants?.reduce((sum, v) => sum + v.stock, 0) || 0
     });
 
     // اصلاح آدرس تصاویر با ID نهایی (اگر ID جدید ساخته شده باشد)
@@ -258,11 +262,15 @@ export async function updateProduct(id: string, input: ProductInput) {
       name: input.name,
       description: input.description,
       price: cleanPrice,
+      purchasePrice: input.purchasePrice ? String(input.purchasePrice) : undefined,
+      shippingType: input.shippingType,
       category_id: input.category_id,
       brand_id: input.brand_id,
       images: imageKeys,
       specs: input.specs,
-      condition: input.condition
+      condition: input.condition,
+      variants: input.variants,
+      stock: input.variants?.reduce((sum, v) => sum + v.stock, 0) || 0
     });
 
     revalidatePath('/admin');
