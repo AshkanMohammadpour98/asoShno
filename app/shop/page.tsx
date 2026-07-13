@@ -1,3 +1,11 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import ProductSkeleton from '@/components/shop/ProductSkeleton';
+import { getProducts, getCategories, getBrands } from '@/lib/actions/products';
+import { getPublicImageUrl } from '@/lib/upload-image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { LocalProduct, LocalCategory, LocalBrand } from '@/lib/types';
 
