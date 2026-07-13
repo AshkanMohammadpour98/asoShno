@@ -3,6 +3,8 @@ import React, { useState, useActionState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { authenticate } from '@/lib/actions/auth-actions';
+
+export default function LoginPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '';
   const [showPassword, setShowPassword] = useState(false);

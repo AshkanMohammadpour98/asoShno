@@ -3,6 +3,8 @@ import React, { useState, useActionState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { registerUser, type ActionState } from '@/lib/actions/auth-actions';
+
+const initialState: ActionState = {
   message: '',
   errors: {},
   success: false
