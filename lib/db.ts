@@ -167,7 +167,7 @@ export async function getLocalCategories() {
   const categories = await prisma.category.findMany({
     orderBy: { createdAt: 'desc' }
   });
-  return categories.map(c => ({ id: c.id, name: c.name })) as LocalCategory[];
+  return categories.map((c: any) => ({ id: c.id, name: c.name })) as LocalCategory[];
 }
 
 export async function addLocalCategory(name: string) {
@@ -200,7 +200,7 @@ export async function getLocalBrands() {
   const brands = await prisma.brand.findMany({
     orderBy: { createdAt: 'desc' }
   });
-  return brands.map(b => ({ id: b.id, name: b.name })) as LocalBrand[];
+  return brands.map((b: any) => ({ id: b.id, name: b.name })) as LocalBrand[];
 }
 
 export async function addLocalBrand(name: string) {
@@ -232,7 +232,7 @@ export async function getLocalAttributes() {
     orderBy: { createdAt: 'asc' }
   });
 
-  return attributes.map(a => ({
+  return attributes.map((a: any) => ({
     id: a.id,
     name: a.name,
     category_id: a.categoryId
@@ -372,7 +372,7 @@ export async function getLocalBlogPosts(filters?: { search?: string; category?: 
   // This usually means when DISPLAYING categories in a list/dropdown, not necessarily for individual posts.
   // I will implement a helper to fetch "Merged Categories" if needed.
 
-  return posts.map(p => ({
+  return posts.map((p: any) => ({
     ...p,
     category: p.category?.name || '',
     createdAt: p.createdAt.toISOString(),
@@ -388,12 +388,12 @@ export async function getMergedBlogCategories() {
   const blogCats = await prisma.blogCategory.findMany();
 
   if (blogCats.length > 0) {
-    return blogCats.map(c => ({ id: c.id, name: c.name })) as BlogCategory[];
+    return blogCats.map((c: any) => ({ id: c.id, name: c.name })) as BlogCategory[];
   }
 
   // Fallback to Product Categories
   const productCats = await prisma.category.findMany();
-  return productCats.map(c => ({ id: c.id, name: c.name })) as BlogCategory[];
+  return productCats.map((c: any) => ({ id: c.id, name: c.name })) as BlogCategory[];
 }
 
 export async function addLocalBlogPost(post: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -486,7 +486,7 @@ export async function getLocalBlogCategories() {
   const cats = await prisma.blogCategory.findMany({
     orderBy: { createdAt: 'desc' }
   });
-  return cats.map(c => ({ id: c.id, name: c.name })) as BlogCategory[];
+  return cats.map((c: any) => ({ id: c.id, name: c.name })) as BlogCategory[];
 }
 
 export async function addLocalBlogCategory(name: string) {
