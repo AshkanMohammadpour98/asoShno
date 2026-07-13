@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: settings.general.siteDescription,
     keywords: settings.general.siteKeywords?.split(",").map(k => k.trim()) || [],
     authors: [{ name: settings.general.siteName }],
-    metadataBase: new URL("https://asoshno.ir"),
+    metadataBase: new URL("https://asoshno.liara.run"),
     icons: {
       icon: settings.general.logo || "/logo/logo.png",
     },
