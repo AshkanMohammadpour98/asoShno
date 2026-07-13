@@ -38,6 +38,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ categories, onSuccess }) => {
         category_id: category_id || undefined,
         main_image: image_file.size > 0 ? image_file : null,
         gallery_images: [],
+        shippingType: 'PAID', // Default value
       });
 
       if (result.success) {
