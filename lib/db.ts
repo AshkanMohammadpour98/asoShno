@@ -264,10 +264,6 @@ export async function deleteLocalAttribute(id: string) {
  * Settings CRUD
  */
 export async function getLocalSettings(): Promise<SiteSettings> {
-  const record = await prisma.siteSettings.findUnique({
-    where: { id: 'main' }
-  });
-
   const defaultSettings: SiteSettings = {
     general: { siteName: "آسو شنو", siteTitle: "آسو شنو", siteDescription: "", siteKeywords: "" },
     contact: { phone: "", address: "", email: "", instagram: "", telegram: "", whatsapp: "" },
@@ -277,17 +273,51 @@ export async function getLocalSettings(): Promise<SiteSettings> {
     features: { shipping: "ارسال سریع", warranty: "ضمانت اصالت", payment: "پرداخت امن", support: "پشتیبانی ۲۴ ساعته" }
   };
 
-  if (!record) return defaultSettings;
+  try {
+    const record = await prisma.siteSettings.findUnique({
+      where: { id: 'main' }
+    });
 
-  const s = record.settings as any;
+    if (!record) return defaultSettings;
 
-  return {
-    general: {
-      siteName: record.siteName || s?.general?.siteName || defaultSettings.general.siteName,
-      logo: record.logo || s?.general?.logo || defaultSettings.general.logo,
-      siteTitle: s?.general?.siteTitle || record.siteName || defaultSettings.general.siteTitle,
-      siteDescription: s?.general?.siteDescription || defaultSettings.general.siteDescription,
-      siteKeywords: s?.general?.siteKeywords || defaultSettings.general.siteKeywords
+    const s = record.settings as any;
+
+    return {
+      general: {
+        siteName: record.siteName || s?.general?.siteName || defaultSettings.general.siteName,
+        logo: record.logo || s?.general?.logo || defaultSettings.general.logo,
+        siteTitle: s?.general?.siteTitle || record.siteName || defaultSettings.general.siteTitle,
+        siteDescription: s?.general?.siteDescription || defaultSettings.general.siteDescription,
+        siteKeywords: s?.general?.siteKeywords || defaultSettings.general.siteKeywords
+      },
+      contact: {
+        email: record.contactEmail || s?.contact?.email || defaultSettings.contact.email,
+        phone: record.phoneNumber || s?.contact?.phone || defaultSettings.contact.phone,
+        address: s?.contact?.address || defaultSettings.contact.address,
+        instagram: s?.contact?.instagram || defaultSettings.contact.instagram,
+        telegram: s?.contact?.telegram || defaultSettings.contact.telegram,
+        whatsapp: s?.contact?.whatsapp || defaultSettings.contact.whatsapp
+      },
+      home: {
+        heroTitle: s?.home?.heroTitle || defaultSettings.home.heroTitle,
+        heroSubtitle: s?.home?.heroSubtitle || defaultSettings.home.heroSubtitle,
+        heroButtonText: s?.home?.heroButtonText || defaultSettings.home.heroButtonText,
+        heroButtonLink: s?.home?.heroButtonLink || defaultSettings.home.heroButtonLink,
+        heroImage: s?.home?.heroImage || record.footerText /* legacy mapping if any */ || defaultSettings.home.heroImage,
+        banners: s?.home?.banners || defaultSettings.home.banners
+      },
+      footer: {
+        aboutText: record.footerText || s?.footer?.aboutText || defaultSettings.footer.aboutText,
+        copyright: s?.footer?.copyright || defaultSettings.footer.copyright
+      },
+      pages: s?.pages || defaultSettings.pages,
+      features: s?.features || defaultSettings.features
+    } as SiteSettings;
+  } catch (error) {
+    console.warn('Warning: Could not fetch site settings from DB during build. Using defaults.', error);
+    return defaultSettings;
+  }
+}
     },
     contact: {
       email: record.contactEmail || s?.contact?.email || defaultSettings.contact.email,
