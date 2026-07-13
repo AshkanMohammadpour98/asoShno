@@ -1,0 +1,12 @@
+{
+  "app": "asoshno",
+  "platform": "next",
+  "port": 3000,
+  "build": {
+    "location": "iran"
+  },
+  "next": {
+    "build": "npx prisma generate && next build"
+  },
+  "disks": []
+}
