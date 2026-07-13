@@ -5,8 +5,5 @@
   "build": {
     "location": "iran"
   },
-  "next": {
-    "build": "npx prisma generate && next build"
-  },
   "disks": []
 }
