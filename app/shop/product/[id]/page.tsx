@@ -46,8 +46,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  // اگر محصول پیدا نشد یا خطایی رخ داد، به صفحه ۴۰۴ نرو، بلکه یک پیام نمایش بده
+  // یا اگر واقعاً می‌خواهی ۴۰۴ باشد، مطمئن شو که ID درست است
   if (!product) {
-    notFound();
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-right font-vazir" dir="rtl">
+        <h2 className="text-2xl font-bold mb-4">محصول مورد نظر پیدا نشد</h2>
+        <Link href="/shop" className="text-primary font-bold">بازگشت به فروشگاه</Link>
+      </div>
+    );
   }
 
   // Dynamic specs from database

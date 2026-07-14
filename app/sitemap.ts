@@ -1,7 +1,9 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://asoshno.ir';
+  // استفاده از متغیر محیطی و حذف کوتیشن‌های احتمالی
+  const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = rawBaseUrl.replace(/['"]/g, '');
 
   return [
     {

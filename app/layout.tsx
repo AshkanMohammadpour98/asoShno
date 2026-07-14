@@ -23,10 +23,10 @@ const estedad = localFont({
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getLocalSettings();
 
-  // آدرس پایه سایت را بر اساس متغیر محیطی تعیین می‌کنیم.
-  // در حالت لوکال، از مقدار موجود در فایل .env استفاده می‌شود (http://localhost:3000)
-  // در لیارا، این مقدار برابر آدرس آنلاین شما خواهد بود.
-  const baseUrl = process.env.NEXTAUTH_URL || "https://asoshno.liara.run";
+  // آدرس پایه سایت را از متغیر محیطی می‌خوانیم.
+  // حذف کوتیشن‌های احتمالی برای جلوگیری از خطای ERR_INVALID_URL در محیط‌هایی مثل لیارا
+  const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = rawBaseUrl.replace(/['"]/g, '');
 
   return {
     title: {

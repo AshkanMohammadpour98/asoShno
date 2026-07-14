@@ -197,8 +197,15 @@ export default function AdminDashboard() {
     setSelectedCategoryId(catId);
     // Load default attributes for this category
     const catAttrs = attributes.filter(a => a.category_id === catId);
-    const initialSpecs = catAttrs.map(a => ({ key: a.name, value: '' }));
-    setDynamicSpecs(initialSpecs);
+
+    // اگر در حال ویرایش هستیم، مقادیر قبلی را حفظ کن و ویژگی‌های جدید را به انتها اضافه کن
+    setDynamicSpecs(prev => {
+        const existingKeys = prev.map(s => s.key);
+        const newAttrs = catAttrs
+            .filter(a => !existingKeys.includes(a.name))
+            .map(a => ({ key: a.name, value: '' }));
+        return [...prev, ...newAttrs];
+    });
   };
 
   const handleEditButtonClick = (product: LocalProduct) => {

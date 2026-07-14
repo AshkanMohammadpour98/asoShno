@@ -37,8 +37,9 @@ async function uploadToS3(folder: string, id: string, file: File, prefix: string
     // استخراج پسوند فایل
     const extension = file.type.split('/')[1]?.split('+')[0] || 'jpg';
 
-    // ساخت نام منحصر به فرد
-    const fileName = `${prefix}-${crypto.randomUUID()}.${extension}`;
+    // استانداردسازی نام فایل برای جلوگیری از مشکل با حروف فارسی و کاراکترهای خاص
+    const cleanPrefix = prefix.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const fileName = `${cleanPrefix}-${crypto.randomUUID()}.${extension}`;
     const key = `${folder}/${id}/${fileName}`;
 
     const command = new PutObjectCommand({
@@ -79,7 +80,10 @@ export async function uploadSystemImage(folder: 'logo' | 'hero' | 'settings', fi
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const extension = file.type.split('/')[1]?.split('+')[0] || 'png';
-    const key = `${folder}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+
+    // استانداردسازی نام فایل سیستم
+    const cleanFileName = file.name.replace(/[^a-z0-9.]/gi, "-").toLowerCase();
+    const key = `${folder}/${Date.now()}-${cleanFileName}`;
 
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
@@ -167,9 +171,24 @@ export async function deleteProductImages(productId: string): Promise<void> {
 export function getPublicImageUrl(key: string | null | undefined): string {
     if (!key) return '/logo/logo.png';
     if (key.startsWith('http')) return key;
-    if (key.startsWith('/')) return key; // برای آدرس‌های محلی قدیمی
+    if (key.startsWith('/')) {
+        // اگر آدرس یک تصویر محلی است که وجود ندارد، تصویر پیش‌فرض را برگردان
+        return key;
+    }
 
-    return `${PUBLIC_URL}/${key}`;
+    // اگر آدرس لیارا ست نشده باشد، فقط کلید را برمی‌گرداند (جلوگیری از URL نامعتبر)
+    if (!PUBLIC_URL) {
+        console.warn('Warning: NEXT_PUBLIC_LIARA_URL is not defined in environment variables.');
+        return key;
+    }
+
+    // حذف کوتیشن‌های احتمالی از آدرس استوریج
+    const cleanPublicUrl = PUBLIC_URL.replace(/['"]/g, '');
+
+    // اطمینان از اینکه Key با اسلش شروع نمی‌شود
+    const cleanKey = key.startsWith('/') ? key.substring(1) : key;
+
+    return `${cleanPublicUrl}/${cleanKey}`;
 }
 
 /**
