@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '*.storage.c2.liara.site',
+      },
+      {
+        protocol: 'https',
         hostname: '*.liara.site',
       },
       {
@@ -22,6 +26,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.liara.space',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.iran.liara.space',
       },
     ],
   },
