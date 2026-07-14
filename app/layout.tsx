@@ -23,6 +23,11 @@ const estedad = localFont({
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getLocalSettings();
 
+  // آدرس پایه سایت را بر اساس متغیر محیطی تعیین می‌کنیم.
+  // در حالت لوکال، از مقدار موجود در فایل .env استفاده می‌شود (http://localhost:3000)
+  // در لیارا، این مقدار برابر آدرس آنلاین شما خواهد بود.
+  const baseUrl = process.env.NEXTAUTH_URL || "https://asoshno.liara.run";
+
   return {
     title: {
       template: `%s | ${settings.general.siteName}`,
@@ -31,14 +36,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description: settings.general.siteDescription,
     keywords: settings.general.siteKeywords?.split(",").map(k => k.trim()) || [],
     authors: [{ name: settings.general.siteName }],
-    metadataBase: new URL("https://asoshno.liara.run"),
+    metadataBase: new URL(baseUrl),
     icons: {
       icon: settings.general.logo || "/logo/logo.png",
     },
     openGraph: {
       title: settings.general.siteTitle,
       description: settings.general.siteDescription,
-      url: "https://asoshno.ir",
+      url: baseUrl,
       siteName: settings.general.siteName,
       images: [{ url: "/logo/main-logo.png" }],
       locale: "fa_IR",
