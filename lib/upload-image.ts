@@ -182,8 +182,13 @@ export function getPublicImageUrl(key: string | null | undefined): string {
         return key;
     }
 
-    // حذف کوتیشن‌های احتمالی از آدرس استوریج
-    const cleanPublicUrl = PUBLIC_URL.replace(/['"]/g, '');
+    // حذف کوتیشن‌های احتمالی و فاصله‌های خالی از آدرس استوریج
+    let cleanPublicUrl = PUBLIC_URL.replace(/['"]/g, '').trim();
+
+    // حذف اسلش انتهایی از URL پایه (اگر وجود داشته باشد)
+    if (cleanPublicUrl.endsWith('/')) {
+        cleanPublicUrl = cleanPublicUrl.slice(0, -1);
+    }
 
     // اطمینان از اینکه Key با اسلش شروع نمی‌شود
     const cleanKey = key.startsWith('/') ? key.substring(1) : key;
