@@ -2,10 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // افزایش محدودیت حجم پردازش تصاویر (اختیاری)
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // غیرفعال کردن بهینه‌سازی خودکار تصاویر برای حل قطعی مشکل ۴۰۰ و ۵۰۰ در لیارا
+    // این کار باعث می‌شود تصاویر مستقیماً از آدرس استوریج بارگذاری شوند
+    unoptimized: true,
+
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'aso-shno-storage.storage.c2.liara.site',
+      },
       {
         protocol: 'https',
         hostname: '**.liara.site',
@@ -24,11 +29,9 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'aso-shno-storage.storage.c2.liara.site',
+        hostname: 'storage.iran.liara.space',
       },
     ],
-    // غیرفعال کردن موقت بهینه‌سازی در صورت تداوم مشکل (به عنوان آخرین راه حل)
-    // unoptimized: true,
   },
 };
 
