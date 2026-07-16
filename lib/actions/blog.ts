@@ -10,7 +10,7 @@ import {
   deleteLocalBlogCategory
 } from '../db';
 import { BlogPost } from '../types';
-import { uploadPostImage, deleteS3Object, deleteS3Folder } from '../upload-image';
+import { uploadPostImage, deleteS3Object, deleteS3Folder, getImageUrl } from '../upload-image';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '../prisma';
 import crypto from 'crypto';
@@ -18,8 +18,16 @@ import crypto from 'crypto';
 export async function getBlogPosts(filters?: { search?: string; category?: string }) {
   try {
     const data = await getLocalBlogPosts(filters);
-    return { success: true, data };
+
+    // Inject signed URLs
+    const enhancedData = await Promise.all(data.map(async (post) => {
+      const signedUrl = await getImageUrl(post.featuredImage);
+      return { ...post, featuredImage: signedUrl };
+    }));
+
+    return { success: true, data: enhancedData };
   } catch (error) {
+    console.error('getBlogPosts Error:', error);
     return { success: false, error: 'خطا در دریافت مقالات' };
   }
 }
@@ -29,8 +37,14 @@ export async function getBlogPostBySlug(slug: string) {
     const posts = await getLocalBlogPosts();
     const post = posts.find(p => p.slug === slug);
     if (!post) return { success: false, error: 'مقاله پیدا نشد' };
-    return { success: true, data: post };
+
+    // Inject signed URL
+    const signedUrl = await getImageUrl(post.featuredImage);
+    const enhancedPost = { ...post, featuredImage: signedUrl };
+
+    return { success: true, data: enhancedPost };
   } catch (error) {
+    console.error('getBlogPostBySlug Error:', error);
     return { success: false, error: 'خطا در دریافت مقاله' };
   }
 }
@@ -89,12 +103,14 @@ export async function updateBlogPost(id: string, post: Partial<BlogPost>, imageF
 
 export async function deleteBlogPost(id: string) {
   try {
+    console.log(`[BlogAction] Starting deletion for post: ${id}`);
     // Delete the virtual folder in S3 for this post
     await deleteS3Folder('posts', id);
 
     // Delete the DB record
     await deleteLocalBlogPost(id);
 
+    console.log(`[BlogAction] Successfully deleted post and images for: ${id}`);
     revalidatePath('/blog');
     revalidatePath('/admin');
     return { success: true };

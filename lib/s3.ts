@@ -1,7 +1,7 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
 export const s3 = new S3Client({
-  region: "default",
+  region: "default", // مطابق مستندات رسمی لیارا
   endpoint: process.env.LIARA_ENDPOINT,
   credentials: {
     accessKeyId: process.env.LIARA_ACCESS_KEY!,

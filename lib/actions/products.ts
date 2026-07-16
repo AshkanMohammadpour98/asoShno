@@ -18,7 +18,7 @@ import {
   deleteLocalAttribute
 } from '../db';
 import { LocalProduct } from '../types';
-import { uploadProductImage, deleteS3Object, deleteProductImages } from '../upload-image';
+import { uploadProductImage, deleteS3Object, deleteProductImages, getImageUrl } from '../upload-image';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '../prisma';
 import crypto from 'crypto';
@@ -61,8 +61,18 @@ export async function getProducts(filters?: {
 }) {
   try {
     const data = await getLocalProducts(filters);
-    return { success: true, data };
+
+    // تزریق آدرس‌های امضا شده (Signed URLs) قبل از ارسال به کلاینت
+    const enhancedData = await Promise.all(data.map(async (product) => {
+      const signedImages = await Promise.all(
+        product.images.map(img => getImageUrl(img))
+      );
+      return { ...product, images: signedImages };
+    }));
+
+    return { success: true, data: enhancedData };
   } catch (e) {
+    console.error('getProducts Error:', e);
     return { success: false, error: 'خطا در دریافت محصولات' };
   }
 }
@@ -72,8 +82,17 @@ export async function getProductById(id: string) {
     const products = await getLocalProducts();
     const product = products.find(p => p.id === id);
     if (!product) return { success: false, error: 'محصول پیدا نشد.' };
-    return { success: true, data: product };
+
+    // تزریق آدرس‌های امضا شده برای محصول تکی
+    const signedImages = await Promise.all(
+      product.images.map(img => getImageUrl(img))
+    );
+
+    const enhancedProduct = { ...product, images: signedImages };
+
+    return { success: true, data: enhancedProduct };
   } catch (error) {
+    console.error('getProductById Error:', error);
     return { success: false, error: 'خطا در دریافت اطلاعات محصول.' };
   }
 }
@@ -186,6 +205,7 @@ async function handleStandardizedImageUploads(productId: string, input: ProductI
 
   // ۱. آپلود تصویر اصلی
   if (input.main_image instanceof File) {
+    console.log(`[Action] Uploading main image for product: ${productId}`);
     // اگر تصویر جدید است، تصویر قبلی را حذف می‌کنیم (اختیاری، بستگی به استراتژی شما دارد)
     if (imageKeys[0]) await deleteS3Object(imageKeys[0]);
 
@@ -199,11 +219,13 @@ async function handleStandardizedImageUploads(productId: string, input: ProductI
     const index = i + 1;
 
     if (img instanceof File) {
+      console.log(`[Action] Uploading gallery image ${index} for product: ${productId}`);
       if (imageKeys[index]) await deleteS3Object(imageKeys[index]);
 
       const key = await uploadProductImage(productId, img, false);
       imageKeys[index] = key;
     } else if (img === null && imageKeys[index]) {
+        console.log(`[Action] Deleting gallery image ${index} for product: ${productId}`);
         // اگر کاربر تصویر را پاک کرده باشد
         await deleteS3Object(imageKeys[index]);
         imageKeys[index] = '';
@@ -218,11 +240,14 @@ async function handleStandardizedImageUploads(productId: string, input: ProductI
  */
 export async function createProduct(input: ProductInput) {
   try {
-    const tempId = crypto.randomUUID();
-    const imageKeys = await handleStandardizedImageUploads(tempId, input);
+    const productId = crypto.randomUUID();
+    console.log(`[Action] Starting create product with ID: ${productId}`);
+
+    const imageKeys = await handleStandardizedImageUploads(productId, input);
     const cleanPrice = toEnglishDigits(String(input.price)).replace(/[^0-9.]/g, '');
 
     const newProduct = await addLocalProduct({
+      id: productId, // استفاده از آیدی تولید شده برای دیتابیس
       name: input.name,
       description: input.description,
       price: cleanPrice,
@@ -237,9 +262,10 @@ export async function createProduct(input: ProductInput) {
       stock: input.variants?.reduce((sum, v) => sum + v.stock, 0) || 0
     });
 
-    // اصلاح آدرس تصاویر با ID نهایی (اگر ID جدید ساخته شده باشد)
-    // نکته: addLocalProduct خودش ID می‌سازد. برای سادگی فعلاً از tempId استفاده کردیم.
-    // اما در حالت حرفه‌ای باید در تراکنش Prisma ابتدا رکورد ساخته شود و سپس آپلود انجام شود.
+    console.log(`[Action] Product created successfully in DB: ${newProduct.id}`);
+    if (imageKeys.length > 0) {
+        console.log(`[Action] TEST THIS URL NOW: https://storage.c2.liara.site/${process.env.LIARA_BUCKET_NAME}/${imageKeys[0]}`);
+    }
 
     revalidatePath('/admin');
     revalidatePath('/shop');
@@ -252,6 +278,7 @@ export async function createProduct(input: ProductInput) {
 
 export async function updateProduct(id: string, input: ProductInput) {
   try {
+    console.log(`[Action] Starting update product: ${id}`);
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) throw new Error('محصول پیدا نشد.');
 
@@ -273,6 +300,8 @@ export async function updateProduct(id: string, input: ProductInput) {
       stock: input.variants?.reduce((sum, v) => sum + v.stock, 0) || 0
     });
 
+    console.log(`[Action] Product updated successfully: ${id}`);
+
     revalidatePath('/admin');
     revalidatePath('/shop');
     revalidatePath(`/shop/product/${id}`);
@@ -285,12 +314,14 @@ export async function updateProduct(id: string, input: ProductInput) {
 
 export async function deleteProduct(id: string) {
   try {
+    console.log(`[ProductAction] Starting deletion for product: ${id}`);
     // ۱. حذف تمامی تصاویر محصول از S3
     await deleteProductImages(id);
 
     // ۲. حذف رکورد از دیتابیس
     await deleteLocalProduct(id);
 
+    console.log(`[ProductAction] Successfully deleted product and images for: ${id}`);
     revalidatePath('/admin');
     revalidatePath('/shop');
     return { success: true };

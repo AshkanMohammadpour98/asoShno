@@ -35,6 +35,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     loadProduct();
   }, [params]);
 
+  // Log product images for debugging
+  useEffect(() => {
+    if (product) {
+      console.log(`[Details] Product loaded with Signed URLs: ${product.name}`);
+      product.images.forEach((img, i) => {
+        console.log(`[Details] Signed Image ${i}: ${img.substring(0, 100)}...`);
+      });
+    }
+  }, [product]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-right font-vazir" dir="rtl">
@@ -84,7 +94,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             >
               {product.images?.[activeImage] ? (
                 <Image
-                  src={getPublicImageUrl(product.images[activeImage])}
+                  src={product.images[activeImage]}
                   alt={product.name}
                   fill
                   className="object-contain p-12 transition-all duration-700 group-hover:scale-105"
@@ -116,7 +126,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   }`}
                 >
                   <Image
-                    src={getPublicImageUrl(img)}
+                    src={img}
                     alt=""
                     fill
                     className="object-cover p-3"
@@ -287,7 +297,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <button className="absolute top-8 right-8 text-4xl text-foreground z-[110]" onClick={() => setIsLightboxOpen(false)}>✕</button>
           <div className="relative w-full h-full max-w-6xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
             <Image
-              src={getPublicImageUrl(product.images[activeImage])}
+              src={product.images[activeImage]}
               alt=""
               fill
               className="object-contain"

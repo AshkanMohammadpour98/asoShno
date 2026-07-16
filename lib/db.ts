@@ -79,9 +79,10 @@ export async function getLocalProducts(filters?: {
   })) as unknown as LocalProduct[];
 }
 
-export async function addLocalProduct(product: Omit<LocalProduct, 'id' | 'created_at'>) {
+export async function addLocalProduct(product: Omit<LocalProduct, 'id' | 'created_at'> & { id?: string }) {
   const newProduct = await prisma.product.create({
     data: {
+      id: product.id, // استفاده از آیدی اگر پاس داده شده باشد
       name: product.name,
       description: product.description,
       price: parseFloat(product.price) || 0,

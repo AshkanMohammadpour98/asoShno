@@ -41,6 +41,17 @@ export default function ShopPage() {
     loadData();
   }, [search, category, brand]);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      console.log(`[Shop] Rendering ${products.length} products with Signed URLs.`);
+      products.forEach(p => {
+        if (p.images && p.images.length > 0) {
+          console.log(`[Shop] Product: ${p.name}, Signed URL Example: ${p.images[0].substring(0, 100)}...`);
+        }
+      });
+    }
+  }, [products]);
+
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(key, value);
@@ -162,13 +173,13 @@ export default function ShopPage() {
                 products.map((product) => (
                   <Link href={`/shop/product/${product.id}`} key={product.id} className="bento-card group p-5 border-border bg-card flex flex-col hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500">
                     <div className="aspect-[4/3] rounded-[2rem] bg-muted/50 mb-6 flex items-center justify-center relative overflow-hidden border border-transparent group-hover:border-primary/20 transition-all duration-700">
-                      <Image
-                        src={getPublicImageUrl(product.images?.[0])}
-                        alt={product.name}
-                        fill
-                        className="object-contain p-8 transition-transform duration-700 group-hover:scale-110"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                      />
+                        <Image
+                          src={product.images?.[0] || '/logo/logo.png'}
+                          alt={product.name}
+                          fill
+                          className="object-contain p-8 transition-transform duration-700 group-hover:scale-110"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        />
                       <div className="absolute top-5 right-5 flex flex-col gap-2">
                           <span className="bg-card/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black border border-border uppercase tracking-widest shadow-sm text-foreground">
                             {product.categories?.name}

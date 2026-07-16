@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'storage.c2.liara.space',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.c2.liara.site',
+      },
+      {
+        protocol: 'https',
         hostname: 'aso-shno-storage.storage.c2.liara.site',
       },
       {
@@ -18,14 +26,6 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.liara.space',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.arvanstorage.ir',
-      },
-      {
-        protocol: 'https',
-        hostname: 'storage.c2.liara.site',
       },
       {
         protocol: 'https',
