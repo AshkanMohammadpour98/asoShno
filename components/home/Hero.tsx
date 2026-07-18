@@ -52,9 +52,36 @@ const Hero = ({ settings }: HeroProps) => {
               ))}
             </h1>
 
-            <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mr-0 mb-12 font-medium">
+            <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mr-0 mb-10 font-medium">
               {settings.home.heroSubtitle}
             </p>
+
+            {/* Quick Search Bar */}
+            <div className="max-w-xl mx-auto lg:mr-0 mb-10 px-2 sm:px-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const query = (e.currentTarget.elements.namedItem('q') as HTMLInputElement).value;
+                  if (query.trim()) window.location.href = `/shop?search=${encodeURIComponent(query)}`;
+                }}
+                className="relative group h-14 sm:h-16"
+              >
+                <input
+                  name="q"
+                  type="text"
+                  placeholder="جستجوی هوشمند قطعات و لپ‌تاپ..."
+                  className="w-full h-full bg-background/80 backdrop-blur-xl border-2 border-border rounded-2xl pr-14 pl-24 sm:pl-32 text-xs sm:text-sm font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none shadow-sm"
+                  dir="rtl"
+                />
+                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xl opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                <button
+                  type="submit"
+                  className="absolute left-2 top-2 bottom-2 px-4 sm:px-8 rounded-xl bg-primary text-primary-foreground text-[10px] sm:text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                >
+                  جستجو
+                </button>
+              </form>
+            </div>
 
             <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-5">
               <Link href={settings.home.heroButtonLink} className="h-16 px-12 rounded-2xl bg-primary text-primary-foreground text-lg font-black shadow-lg shadow-primary/20 hover:translate-y-[-4px] transition-all flex items-center justify-center">{settings.home.heroButtonText}</Link>

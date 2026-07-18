@@ -18,6 +18,7 @@ import {
   getAttributes,
   createAttribute,
   deleteAttribute,
+  getFeaturedProductsAction,
   ProductInput
 } from '@/lib/actions/products';
 import { getSiteSettings, updateSiteSettings } from '@/lib/actions/settings';
@@ -32,6 +33,8 @@ import {
 } from '@/lib/actions/blog';
 import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { formatPrice, parsePrice, toEnglishDigits } from '@/lib/utils';
+import ProductSelector from '@/components/shop/ProductSelector';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -49,6 +52,8 @@ export default function AdminDashboard() {
   // Form State
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<LocalProduct | null>(null);
+  const [formPrice, setFormPrice] = useState('');
+  const [formPurchasePrice, setFormPurchasePrice] = useState('');
   const [mainImage, setMainImage] = useState<File | string | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<(File | string | null)[]>([null, null, null]);
@@ -68,8 +73,18 @@ export default function AdminDashboard() {
 
   // CMS State
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
-  const [cmsFiles, setCmsFiles] = useState<{heroImage?: File, logo?: File, banners: {index: number, file: File}[]}>({banners: []});
-  const [previews, setPreviews] = useState<{hero?: string, logo?: string, banners: string[]}>({banners: []});
+  const [cmsFiles, setCmsFiles] = useState<{
+    heroImage?: File,
+    logo?: File,
+    banners: {index: number, file: File}[],
+    services: {index: number, file: File}[]
+  }>({banners: [], services: []});
+  const [previews, setPreviews] = useState<{
+    hero?: string,
+    logo?: string,
+    banners: string[],
+    services: string[]
+  }>({banners: [], services: []});
 
   // Mgmt States
   const [newCatName, setNewCatName] = useState('');
@@ -98,6 +113,50 @@ export default function AdminDashboard() {
   const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
   const [newBlogCatName, setNewBlogCatName] = useState('');
 
+  // Featured Products MGMT
+  const [featuredProducts, setFeaturedProducts] = useState<LocalProduct[]>([]);
+  const [isAddingFeatured, setIsAddingFeatured] = useState(false);
+
+  async function fetchBlogPosts() {
+    const res = await getBlogPosts(blogFilters);
+    if (res.success) setBlogPosts(res.data || []);
+  }
+
+  async function fetchBlogCategories() {
+    const res = await getBlogCategories();
+    if (res.success) setBlogCategories(res.data || []);
+  }
+
+  async function fetchSettings() {
+    const res = await getSiteSettings();
+    if (res.success) setSiteSettings(res.data || null);
+  }
+
+  async function fetchProducts() {
+    const res = await getProducts(listFilters);
+    if (res.success) setProducts(res.data || []);
+  }
+
+  async function fetchCategories() {
+    const res = await getCategories();
+    if (res.success) setCategories(res.data || []);
+  }
+
+  async function fetchBrands() {
+    const res = await getBrands();
+    if (res.success) setBrands(res.data || []);
+  }
+
+  async function fetchAttributes() {
+    const res = await getAttributes();
+    if (res.success) setAttributes(res.data || []);
+  }
+
+  async function fetchFeatured() {
+    const res = await getFeaturedProductsAction();
+    if (res.success) setFeaturedProducts(res.data || []);
+  }
+
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -113,57 +172,29 @@ export default function AdminDashboard() {
       fetchAttributes(),
       fetchSettings(),
       fetchBlogPosts(),
-      fetchBlogCategories()
+      fetchBlogCategories(),
+      fetchFeatured()
     ]).finally(() => {
       setLoading(false);
     });
   }, []);
 
-  const fetchBlogPosts = async () => {
-    const res = await getBlogPosts(blogFilters);
-    if (res.success) setBlogPosts(res.data || []);
-  };
-
   useEffect(() => {
     fetchBlogPosts();
   }, [blogFilters]);
-
-  const fetchBlogCategories = async () => {
-    const res = await getBlogCategories();
-    if (res.success) setBlogCategories(res.data || []);
-  };
-
-  const fetchSettings = async () => {
-    const res = await getSiteSettings();
-    if (res.success) setSiteSettings(res.data || null);
-  };
-
-  const fetchProducts = async () => {
-    const res = await getProducts(listFilters);
-    if (res.success) setProducts(res.data || []);
-  };
 
   useEffect(() => {
     fetchProducts();
   }, [listFilters]);
 
-  const fetchCategories = async () => {
-    const res = await getCategories();
-    if (res.success) setCategories(res.data || []);
-  };
-
-  const fetchBrands = async () => {
-    const res = await getBrands();
-    if (res.success) setBrands(res.data || []);
-  };
-
-  const fetchAttributes = async () => {
-    const res = await getAttributes();
-    if (res.success) setAttributes(res.data || []);
-  };
-
   const toggleSection = (id: string) => {
     setOpenSections(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+
+  const onPriceInput = (val: string, setter: (v: string) => void) => {
+    const engVal = toEnglishDigits(val);
+    const numeric = engVal.replace(/[^0-9]/g, '');
+    setter(formatPrice(numeric));
   };
 
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,6 +244,9 @@ export default function AdminDashboard() {
     setIsAddingProduct(true);
     setSelectedCategoryId(product.category_id || '');
     setDynamicSpecs(product.specs || []);
+
+    setFormPrice(formatPrice(product.price));
+    setFormPurchasePrice(formatPrice(product.purchasePrice));
 
     setMainImagePreview(product.images?.[0] || null);
     setMainImage(product.images?.[0] || null);
@@ -266,16 +300,20 @@ export default function AdminDashboard() {
 
     const productData: ProductInput = {
       name: formData.get('name') as string,
-      price: formData.get('price') as string,
+      price: parsePrice(formPrice),
       description: formData.get('description') as string,
       category_id: formData.get('category_id') as string,
       brand_id: formData.get('brand_id') as string,
       condition: formData.get('condition') as string,
-      purchasePrice: formData.get('purchasePrice') as string,
+      isFeatured: formData.get('isFeatured') === 'on',
+      purchasePrice: parsePrice(formPurchasePrice),
       shippingType: formData.get('shippingType') as 'FREE' | 'PAID',
       main_image: mainImage,
       gallery_images: galleryImages,
-      variants: variants.filter(v => v.colorName),
+      variants: variants.filter(v => v.colorName).map(v => ({
+        ...v,
+        price: v.price ? parsePrice(String(v.price)) : undefined
+      })),
       specs: dynamicSpecs.filter(s => s.key && s.value)
     };
 
@@ -304,6 +342,8 @@ export default function AdminDashboard() {
     setGalleryPreviews([null, null, null]);
     setVariants([{ colorName: '', stock: 0 }]);
     setEditingProduct(null);
+    setFormPrice('');
+    setFormPurchasePrice('');
     setDynamicSpecs([]);
     setSelectedCategoryId('');
     setOpenSections(['basic']);
@@ -345,6 +385,16 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleServiceChange = (index: number, field: string, value: string) => {
+    setSiteSettings(prev => {
+      if (!prev) return null;
+      const newServices = [...prev.home.services];
+      if (!newServices[index]) newServices[index] = { title: '', description: '', icon: '', image: '', className: '' };
+      newServices[index] = { ...newServices[index], [field]: value };
+      return { ...prev, home: { ...prev.home, services: newServices } };
+    });
+  };
+
   const handleAddBanner = () => {
     setSiteSettings(prev => {
       if (!prev) return null;
@@ -371,7 +421,7 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleCmsFileUpload = (type: 'hero' | 'logo' | 'banner', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+  const handleCmsFileUpload = (type: 'hero' | 'logo' | 'banner' | 'service', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -393,6 +443,16 @@ export default function AdminDashboard() {
           newBanners[index] = reader.result as string;
           return { ...prev, banners: newBanners };
         });
+      } else if (type === 'service' && index !== undefined) {
+        setCmsFiles(prev => {
+          const newServices = prev.services.filter(s => s.index !== index);
+          return { ...prev, services: [...newServices, { index, file }] };
+        });
+        setPreviews(prev => {
+          const newServices = [...prev.services];
+          newServices[index] = reader.result as string;
+          return { ...prev, services: newServices };
+        });
       }
     };
     reader.readAsDataURL(file);
@@ -404,13 +464,50 @@ export default function AdminDashboard() {
     const res = await updateSiteSettings(siteSettings, {
       heroImage: cmsFiles.heroImage,
       logo: cmsFiles.logo,
-      banners: cmsFiles.banners
+      banners: cmsFiles.banners,
+      services: cmsFiles.services
     });
     if (res.success) {
       setNotification({ message: 'تنظیمات با موفقیت ذخیره شد', type: 'success' });
       fetchSettings();
     } else {
       setNotification({ message: res.error || 'خطا در ذخیره تنظیمات', type: 'error' });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleSelectFeatured = async (product: LocalProduct) => {
+    setIsSubmitting(true);
+    // منطق: محصول را به عنوان ویژه تیک می‌زنیم.
+    // اگر از قبل 4 تا دستی داشتیم، آخرین (بر اساس تاریخ آپدیت) را برمیداریم؟
+    // فعلاً فقط تیک می‌زنیم، لیست بر اساس updatedAt مرتب شده و take(4) می‌شود.
+    const res = await updateProduct(product.id, {
+        ...product as any,
+        isFeatured: true
+    });
+
+    if (res.success) {
+        setNotification({ message: 'محصول به لیست پیشنهادی اضافه شد', type: 'success' });
+        fetchFeatured();
+    } else {
+        setNotification({ message: 'خطا در افزودن محصول', type: 'error' });
+    }
+    setIsAddingFeatured(false);
+    setIsSubmitting(false);
+  };
+
+  const handleRemoveFeatured = async (product: LocalProduct) => {
+    setIsSubmitting(true);
+    const res = await updateProduct(product.id, {
+        ...product as any,
+        isFeatured: false
+    });
+
+    if (res.success) {
+        setNotification({ message: 'محصول از لیست پیشنهادی حذف شد', type: 'success' });
+        fetchFeatured();
+    } else {
+        setNotification({ message: 'خطا در حذف محصول', type: 'error' });
     }
     setIsSubmitting(false);
   };
@@ -596,16 +693,19 @@ export default function AdminDashboard() {
                 </div>
 
                 {!isAddingProduct && (
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
                     <div className="flex-1 min-w-[200px] space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">جستجو در لیست</label>
-                      <input
-                        type="text"
-                        placeholder="نام یا توضیح..."
-                        value={listFilters.search}
-                        onChange={(e) => setListFilters(prev => ({ ...prev, search: e.target.value }))}
-                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600"
-                      />
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2 tracking-widest">جستجو در لیست</label>
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          placeholder="نام یا توضیح..."
+                          value={listFilters.search}
+                          onChange={(e) => setListFilters(prev => ({ ...prev, search: e.target.value }))}
+                          className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-12 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                      </div>
                     </div>
                     <div className="w-full sm:w-48 space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase mr-2">دسته‌بندی</label>
@@ -659,12 +759,12 @@ export default function AdminDashboard() {
                         <div className="flex flex-col gap-1">
                           <div className="flex justify-between text-[10px] font-bold">
                             <span className="text-slate-400">قیمت فروش:</span>
-                            <span className="text-indigo-600">{Number(prod.price).toLocaleString()} تومان</span>
+                            <span className="text-indigo-600">{formatPrice(prod.price)} تومان</span>
                           </div>
                           {prod.purchasePrice && (
                             <div className="flex justify-between text-[10px] font-bold">
                               <span className="text-red-400">قیمت خرید:</span>
-                              <span className="text-red-500">{Number(prod.purchasePrice).toLocaleString()} تومان</span>
+                              <span className="text-red-500">{formatPrice(prod.purchasePrice)} تومان</span>
                             </div>
                           )}
                           <div className="flex justify-between text-[10px] font-bold">
@@ -707,11 +807,26 @@ export default function AdminDashboard() {
                              </div>
                              <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase mr-2">قیمت فروش (تومان)</label>
-                                <input type="text" name="price" required defaultValue={editingProduct?.price} className="w-full h-14 sm:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black border-2 border-transparent focus:border-indigo-600 outline-none" />
+                                <input
+                                  type="text"
+                                  name="price"
+                                  required
+                                  value={formPrice}
+                                  onChange={(e) => onPriceInput(e.target.value, setFormPrice)}
+                                  placeholder="مثلا: 25,000,000"
+                                  className="w-full h-14 sm:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black border-2 border-transparent focus:border-indigo-600 outline-none"
+                                />
                              </div>
                              <div className="space-y-3">
                                 <label className="text-[10px] font-black text-red-400 uppercase mr-2 italic">قیمت خرید (فقط برای ادمین)</label>
-                                <input type="text" name="purchasePrice" defaultValue={editingProduct?.purchasePrice} className="w-full h-14 sm:h-16 bg-red-50/30 dark:bg-red-900/10 rounded-2xl px-6 font-black border-2 border-transparent focus:border-red-500 outline-none" />
+                                <input
+                                  type="text"
+                                  name="purchasePrice"
+                                  value={formPurchasePrice}
+                                  onChange={(e) => onPriceInput(e.target.value, setFormPurchasePrice)}
+                                  placeholder="مثلا: 20,000,000"
+                                  className="w-full h-14 sm:h-16 bg-red-50/30 dark:bg-red-900/10 rounded-2xl px-6 font-black border-2 border-transparent focus:border-red-500 outline-none"
+                                />
                              </div>
                              <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase mr-2">وضعیت هزینه ارسال</label>
@@ -750,6 +865,16 @@ export default function AdminDashboard() {
                                    <option value="کارکرده">کارکرده (Used)</option>
                                    <option value="نیاز به سرویس / تعمیر">نیاز به سرویس / تعمیر</option>
                                 </select>
+                             </div>
+                             <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus-within:border-indigo-600">
+                                <input
+                                  type="checkbox"
+                                  name="isFeatured"
+                                  id="prod-feat"
+                                  defaultChecked={editingProduct?.isFeatured}
+                                  className="h-6 w-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                                />
+                                <label htmlFor="prod-feat" className="text-sm font-black text-slate-700 dark:text-slate-300 cursor-pointer">نمایش در محصولات پیشنهادی (ویژه)</label>
                              </div>
                           </div>
                         )}
@@ -818,7 +943,7 @@ export default function AdminDashboard() {
                              <div className="grid grid-cols-1 gap-4 sm:gap-6">
                                 {variants.map((variant, i) => (
                                   <div key={i} className="flex gap-4 items-end group animate-fade-in bg-slate-50/50 p-4 rounded-2xl border border-slate-100 relative">
-                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                           <label className="text-[10px] font-black text-slate-400 uppercase">نام رنگ</label>
                                           <input
@@ -835,6 +960,20 @@ export default function AdminDashboard() {
                                             placeholder="تعداد..."
                                             value={variant.stock}
                                             onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                                            className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-black text-xs border border-slate-200 focus:border-indigo-600 outline-none"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-[10px] font-black text-slate-400 uppercase">قیمت اختصاصی (اختیاری)</label>
+                                          <input
+                                            type="text"
+                                            placeholder="خالی = قیمت اصلی"
+                                            value={formatPrice(variant.price)}
+                                            onChange={(e) => {
+                                              const engVal = toEnglishDigits(e.target.value);
+                                              const numeric = engVal.replace(/[^0-9]/g, '');
+                                              updateVariant(i, 'price', numeric);
+                                            }}
                                             className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-black text-xs border border-slate-200 focus:border-indigo-600 outline-none"
                                           />
                                         </div>
@@ -1086,6 +1225,78 @@ export default function AdminDashboard() {
                     </div>
                   </section>
 
+                  {/* Why Aso Shno? (Services Bento) */}
+                  <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+                    <div className="flex items-center gap-4 border-b border-slate-50 dark:border-slate-800 pb-6">
+                      <span className="text-2xl">🤔</span>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white">بخش «چرا آسو شنو؟»</h4>
+                    </div>
+                    <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">عنوان اصلی بخش</label>
+                          <input value={siteSettings.home.servicesTitle} onChange={e => handleCmsChange('home', 'servicesTitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">زیرعنوان بخش</label>
+                          <input value={siteSettings.home.servicesSubtitle} onChange={e => handleCmsChange('home', 'servicesSubtitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-50 dark:border-slate-800 pt-8">
+                         <h5 className="font-black text-slate-800 dark:text-slate-200 mb-6 uppercase tracking-widest text-[10px]">کارت‌های بخش مزایا (Bento Cards)</h5>
+                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {siteSettings.home.services.map((service, idx) => (
+                               <div key={idx} className="p-8 rounded-[2rem] bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-6 relative group">
+                                  <div className="flex items-center gap-4 mb-2">
+                                     <span className="h-10 w-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center border border-border shadow-sm text-xl">
+                                        {idx + 1}
+                                     </span>
+                                     <h6 className="font-black text-slate-700 dark:text-slate-300">کارت {idx + 1}</h6>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 mr-2 uppercase">عنوان کارت</label>
+                                        <input value={service.title} onChange={e => handleServiceChange(idx, 'title', e.target.value)} className="w-full h-11 bg-white dark:bg-slate-900 rounded-xl px-4 text-xs font-bold outline-none border border-border" />
+                                     </div>
+                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 mr-2 uppercase">آیکون (Emoji)</label>
+                                        <input value={service.icon} onChange={e => handleServiceChange(idx, 'icon', e.target.value)} className="w-full h-11 bg-white dark:bg-slate-900 rounded-xl px-4 text-xs font-bold outline-none border border-border text-center" />
+                                     </div>
+                                     <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 mr-2 uppercase">توضیحات کوتاه</label>
+                                        <textarea value={service.description} onChange={e => handleServiceChange(idx, 'description', e.target.value)} rows={2} className="w-full bg-white dark:bg-slate-900 rounded-xl p-4 text-xs font-bold outline-none border border-border resize-none" />
+                                     </div>
+                                  </div>
+
+                                  {/* Optional Image for Card 1 and 4 */}
+                                  {(idx === 0 || idx === 3) && (
+                                     <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-slate-400 mr-2 uppercase">تصویر پس‌زمینه کارت</label>
+                                        <div onClick={() => document.getElementById(`service-up-${idx}`)?.click()} className="aspect-video rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden relative">
+                                           <input type="file" id={`service-up-${idx}`} className="hidden" accept="image/*" onChange={(e) => handleCmsFileUpload('service', e, idx)} />
+                                           {previews.services[idx] || service.image ? (
+                                              <Image
+                                                 src={previews.services[idx] || getPublicImageUrl(service.image)}
+                                                 alt=""
+                                                 fill
+                                                 className="object-contain p-4"
+                                                 sizes="(max-width: 768px) 100vw, 400px"
+                                              />
+                                           ) : (
+                                              <span className="text-slate-300 text-xs">انتخاب تصویر</span>
+                                           )}
+                                        </div>
+                                     </div>
+                                  )}
+                               </div>
+                            ))}
+                         </div>
+                      </div>
+                    </div>
+                  </section>
+
                   {/* Features & Messages */}
                   <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
                     <div className="flex items-center gap-4 border-b border-slate-50 dark:border-slate-800 pb-6">
@@ -1095,20 +1306,139 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">پیام ارسال (Shipping)</label>
-                        <input value={siteSettings.features.shipping} onChange={e => handleCmsChange('features', 'shipping', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none" />
+                        <input value={siteSettings.features.shipping} onChange={e => handleCmsChange('features', 'shipping', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">پیام ضمانت (Warranty)</label>
-                        <input value={siteSettings.features.warranty} onChange={e => handleCmsChange('features', 'warranty', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none" />
+                        <input value={siteSettings.features.warranty} onChange={e => handleCmsChange('features', 'warranty', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">پیام پرداخت (Payment)</label>
-                        <input value={siteSettings.features.payment} onChange={e => handleCmsChange('features', 'payment', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none" />
+                        <input value={siteSettings.features.payment} onChange={e => handleCmsChange('features', 'payment', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">پیام پشتیبانی (Support)</label>
-                        <input value={siteSettings.features.support} onChange={e => handleCmsChange('features', 'support', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none" />
+                        <input value={siteSettings.features.support} onChange={e => handleCmsChange('features', 'support', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                       </div>
+                    </div>
+                  </section>
+
+                  {/* Repair Process */}
+                  <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+                    <div className="flex items-center gap-4 border-b border-slate-50 dark:border-slate-800 pb-6">
+                      <span className="text-2xl">🛠️</span>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white">بخش «روند تعمیرات»</h4>
+                    </div>
+                    <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">عنوان بخش</label>
+                          <input value={siteSettings.home.repairTitle} onChange={e => handleCmsChange('home', 'repairTitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">زیرعنوان بخش</label>
+                          <input value={siteSettings.home.repairSubtitle} onChange={e => handleCmsChange('home', 'repairSubtitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                         {siteSettings.home.repairSteps.map((step, idx) => (
+                            <div key={idx} className="p-6 rounded-3xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-4">
+                               <div className="flex items-center gap-2">
+                                  <input value={step.icon} onChange={e => {
+                                     const newSteps = [...siteSettings.home.repairSteps];
+                                     newSteps[idx].icon = e.target.value;
+                                     handleCmsChange('home', 'repairSteps', newSteps as any);
+                                  }} className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl text-center text-lg border border-border" />
+                                  <input value={step.title} onChange={e => {
+                                     const newSteps = [...siteSettings.home.repairSteps];
+                                     newSteps[idx].title = e.target.value;
+                                     handleCmsChange('home', 'repairSteps', newSteps as any);
+                                  }} className="flex-1 h-10 bg-white dark:bg-slate-900 rounded-xl px-3 text-[10px] font-black border border-border" />
+                               </div>
+                               <textarea value={step.description} onChange={e => {
+                                  const newSteps = [...siteSettings.home.repairSteps];
+                                  newSteps[idx].description = e.target.value;
+                                  handleCmsChange('home', 'repairSteps', newSteps as any);
+                               }} rows={3} className="w-full bg-white dark:bg-slate-900 rounded-xl p-3 text-[9px] font-bold border border-border resize-none" />
+                            </div>
+                         ))}
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* CTA Section */}
+                  <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+                    <div className="flex items-center gap-4 border-b border-slate-50 dark:border-slate-800 pb-6">
+                      <span className="text-2xl">📢</span>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white">بخش فراخوان (CTA) نهایی</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">عنوان فراخوان</label>
+                          <input value={siteSettings.home.ctaTitle} onChange={e => handleCmsChange('home', 'ctaTitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">زیرعنوان فراخوان</label>
+                          <input value={siteSettings.home.ctaSubtitle} onChange={e => handleCmsChange('home', 'ctaSubtitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">متن دکمه</label>
+                          <input value={siteSettings.home.ctaButtonText} onChange={e => handleCmsChange('home', 'ctaButtonText', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">لینک دکمه</label>
+                          <input value={siteSettings.home.ctaButtonLink} onChange={e => handleCmsChange('home', 'ctaButtonLink', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" />
+                       </div>
+                    </div>
+                  </section>
+
+                  {/* Featured Products Management */}
+                  <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+                    <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-6">
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl">⭐</span>
+                        <div>
+                          <h4 className="text-xl font-black text-slate-900 dark:text-white">محصولات پیشنهادی (ویترین صفحه اصلی)</h4>
+                          <p className="text-[10px] text-slate-400 mt-1">حداکثر ۴ محصول برای نمایش در بخش منتخب صفحه اصلی.</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setIsAddingFeatured(true)}
+                        className="h-10 px-6 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                      >
+                        + افزودن محصول
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {featuredProducts.filter(p => p.isFeatured).map(prod => (
+                        <div key={prod.id} className="p-4 rounded-3xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 relative group">
+                          <button
+                            onClick={() => handleRemoveFeatured(prod)}
+                            className="absolute -top-2 -left-2 h-8 w-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          >
+                            ✕
+                          </button>
+                          <div className="aspect-square rounded-2xl bg-white dark:bg-slate-900 overflow-hidden relative mb-4">
+                             <Image
+                                src={getPublicImageUrl(prod.images[0])}
+                                alt=""
+                                fill
+                                className="object-contain p-2"
+                                sizes="100px"
+                             />
+                          </div>
+                          <h5 className="text-[10px] font-black text-slate-800 dark:text-slate-200 truncate">{prod.name}</h5>
+                          <p className="text-[9px] font-bold text-indigo-500 mt-1">{formatPrice(prod.price)} تومان</p>
+                        </div>
+                      ))}
+
+                      {featuredProducts.filter(p => p.isFeatured).length === 0 && (
+                        <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] text-slate-400">
+                          <p className="text-xs font-bold italic">محصولی انتخاب نشده است. آخرین محصولات سایت نمایش داده می‌شوند.</p>
+                        </div>
+                      )}
                     </div>
                   </section>
 
@@ -1150,16 +1480,19 @@ export default function AdminDashboard() {
                 </div>
 
                 {!isAddingPost && (
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-end">
                     <div className="flex-1 min-w-[200px] space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2">جستجو در مقالات</label>
-                      <input
-                        type="text"
-                        placeholder="عنوان یا محتوا..."
-                        value={blogFilters.search}
-                        onChange={(e) => setBlogFilters(prev => ({ ...prev, search: e.target.value }))}
-                        className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600"
-                      />
+                      <label className="text-[10px] font-black text-slate-400 uppercase mr-2 tracking-widest">جستجو در مقالات</label>
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          placeholder="عنوان یا محتوا..."
+                          value={blogFilters.search}
+                          onChange={(e) => setBlogFilters(prev => ({ ...prev, search: e.target.value }))}
+                          className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-12 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                      </div>
                     </div>
                     <div className="w-full sm:w-48 space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase mr-2">دسته‌بندی</label>
@@ -1522,6 +1855,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      <ProductSelector
+        isOpen={isAddingFeatured}
+        onClose={() => setIsAddingFeatured(false)}
+        onSelect={handleSelectFeatured}
+        excludeIds={featuredProducts.filter(p => p.isFeatured).map(p => p.id)}
+        title="انتخاب محصول برای ویترین پیشنهادی"
+      />
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }

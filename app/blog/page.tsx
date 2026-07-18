@@ -97,15 +97,18 @@ export default function BlogPage() {
 
                 {/* Categories / Search Side Bento */}
                 <div className="lg:col-span-4 grid grid-cols-1 gap-8">
-                   <div className="bento-card bg-card border border-border p-10 flex flex-col gap-8 shadow-sm">
+                   <div className="bento-card bg-card border border-border p-8 sm:p-10 flex flex-col gap-6 sm:gap-8 shadow-sm">
                       <h3 className="text-xl font-bold text-foreground">جستجو در مقالات</h3>
-                      <input
-                        type="text"
-                        placeholder="دنبال چی می‌گردی؟..."
-                        value={search}
-                        onChange={(e) => updateFilter('search', e.target.value)}
-                        className="w-full h-14 bg-muted/50 rounded-2xl px-6 font-bold text-sm outline-none border-2 border-transparent focus:border-primary transition-all"
-                      />
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          placeholder="دنبال چی می‌گردی؟..."
+                          value={search}
+                          onChange={(e) => updateFilter('search', e.target.value)}
+                          className="w-full h-14 bg-muted/50 rounded-2xl px-12 font-bold text-sm outline-none border-2 border-transparent focus:border-primary transition-all focus:bg-background"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                      </div>
                    </div>
 
                    <div className="bento-card bg-foreground text-background p-10 flex flex-col justify-between border-none shadow-xl">

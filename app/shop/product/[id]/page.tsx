@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import SafeImage from '@/components/common/SafeImage';
 import Link from 'next/link';
 import { getProductById } from '@/lib/actions/products';
 import { notFound, useRouter } from 'next/navigation';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { useCart } from '@/components/providers/CartProvider';
+import ProductDetailsActions from '@/components/shop/ProductDetailsActions';
+import { formatPrice } from '@/lib/utils';
 import type { LocalProduct, LocalProductVariant } from '@/lib/types';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -70,7 +72,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   // Dynamic specs from database
   const specs = product.specs || [];
 
-  const displayPrice = Number(product.price).toLocaleString('fa-IR');
+  const currentPrice = selectedVariant?.price ? Number(selectedVariant.price) : Number(product.price);
+  const displayPrice = formatPrice(currentPrice);
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
@@ -93,7 +96,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               className="relative aspect-square sm:aspect-video lg:aspect-square rounded-[3.5rem] overflow-hidden bg-muted border border-border group shadow-sm transition-all duration-500 hover:shadow-xl cursor-zoom-in"
             >
               {product.images?.[activeImage] ? (
-                <Image
+                <SafeImage
                   src={product.images[activeImage]}
                   alt={product.name}
                   fill
@@ -125,7 +128,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     activeImage === i ? 'border-primary ring-8 ring-primary/5' : 'border-border bg-muted hover:border-primary/40'
                   }`}
                 >
-                  <Image
+                  <SafeImage
                     src={img}
                     alt=""
                     fill
@@ -138,41 +141,48 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Info Section */}
-          <div className="lg:col-span-5 space-y-10">
+          <div className="lg:col-span-5 space-y-6 lg:space-y-8">
             <div>
-              <div className="flex items-center gap-3 mb-6">
-                <span className={`h-2 w-2 rounded-full ${selectedVariant?.stock ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></span>
-                <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${selectedVariant?.stock ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {selectedVariant ? (selectedVariant.stock > 0 ? `آماده ارسال فوری (${selectedVariant.stock} عدد در انبار)` : 'ناموجود در انبار') : 'درحال بررسی موجودی...'}
-                </span>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 lg:mb-6">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${selectedVariant?.stock ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></span>
+                  <span className={`text-[9px] lg:text-[10px] font-black uppercase tracking-widest ${selectedVariant?.stock ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {selectedVariant ? (selectedVariant.stock > 0 ? `آماده ارسال (${selectedVariant.stock} عدد)` : 'ناموجود') : 'بررسی موجودی...'}
+                  </span>
+                </div>
                 {product.condition && (
                   <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
-                    <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800/50">
+                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
+                    <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md text-[8px] lg:text-[9px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800/50">
                       وضعیت: {product.condition}
                     </span>
                   </>
                 )}
               </div>
-              <h1 className="text-4xl lg:text-6xl font-estedad mb-6 leading-[1.1] text-foreground tracking-tight">{product.name}</h1>
-              <p className="text-muted-foreground leading-relaxed text-base lg:text-lg font-medium whitespace-pre-line line-clamp-4">
+              <h1 className="text-3xl lg:text-5xl font-estedad mb-4 lg:mb-6 leading-tight text-foreground tracking-tight">{product.name}</h1>
+              <p className="text-muted-foreground leading-relaxed text-sm lg:text-base font-medium whitespace-pre-line line-clamp-3">
                 {product.description || 'توضیحاتی برای این محصول وارد نشده است.'}
               </p>
             </div>
 
+            {/* Quick Actions (Compact) */}
+            <div className="border-t border-b border-border py-4">
+              <ProductDetailsActions product={product} />
+            </div>
+
             {/* Variant Selection */}
             {product.variants && product.variants.length > 0 && (
-              <div className="space-y-6">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-1">انتخاب تنوع محصول (رنگ)</label>
-                <div className="flex flex-wrap gap-4">
+              <div className="space-y-4">
+                <label className="text-[9px] lg:text-[10px] font-black text-muted-foreground uppercase tracking-widest mr-1">انتخاب رنگ</label>
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                   {product.variants.map((v, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedVariant(v)}
-                      className={`px-6 py-3 rounded-2xl border-2 transition-all font-bold text-sm ${
+                      className={`px-4 lg:px-5 py-2 rounded-xl border-2 transition-all font-bold text-xs ${
                         selectedVariant?.colorName === v.colorName
-                        ? 'border-primary bg-primary/5 text-primary ring-4 ring-primary/5'
-                        : 'border-border text-muted-foreground hover:border-primary/30'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/20'
                       }`}
                     >
                       {v.colorName}
@@ -182,32 +192,31 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
-            <div className="bg-card border border-border rounded-[3rem] p-10 space-y-8 shadow-sm relative overflow-hidden">
-              <div className="flex items-end justify-between">
+            <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-sm relative overflow-hidden">
+              <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">قیمت نهایی محصول</p>
-                  <div className="text-4xl font-black text-foreground">
-                    {displayPrice} <small className="text-sm font-normal mr-1 text-muted-foreground">تومان</small>
+                  <p className="text-[9px] lg:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 lg:mb-2">قیمت نهایی</p>
+                  <div className="text-3xl lg:text-4xl font-black text-foreground">
+                    {displayPrice} <small className="text-xs font-normal mr-1 text-muted-foreground">تومان</small>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                   <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-primary/20">Original Stock</div>
+                <div className="flex flex-col items-end gap-1 lg:gap-2">
                    {product.shippingType === 'FREE' ? (
-                     <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">✈️ ارسال رایگان و بیمه شده</span>
+                     <span className="text-[9px] lg:text-[10px] font-black text-emerald-600 uppercase tracking-widest">✈️ ارسال رایگان</span>
                    ) : (
-                     <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">✈️ هزینه ارسال: طبق توافق</span>
+                     <span className="text-[9px] lg:text-[10px] font-black text-orange-500 uppercase tracking-widest">✈️ طبق توافق</span>
                    )}
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
                 <button
                   onClick={() => {
                     if (!selectedVariant || selectedVariant.stock <= 0) return;
                     addItem({
                       id: product.id,
                       name: product.name,
-                      price: Number(product.price),
+                      price: currentPrice,
                       image: product.images[0] || '/logo/logo.png',
                       qty: 1,
                       colorName: selectedVariant.colorName,
@@ -217,7 +226,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     setTimeout(() => setIsAdded(false), 2000);
                   }}
                   disabled={!selectedVariant || selectedVariant.stock <= 0}
-                  className={`w-full h-20 rounded-[2rem] font-black text-lg shadow-2xl transition-all flex items-center justify-center gap-4 ${
+                  className={`h-16 lg:h-18 rounded-2xl font-black text-base lg:text-lg shadow-xl transition-all flex items-center justify-center gap-3 ${
                     isAdded
                     ? 'bg-emerald-500 text-white'
                     : (!selectedVariant || selectedVariant.stock <= 0)
@@ -225,67 +234,66 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       : 'bg-primary text-primary-foreground shadow-primary/30 hover:scale-[1.02] active:scale-95'
                   }`}
                 >
-                  <span className="text-2xl">{isAdded ? '✅' : '🛒'}</span>
-                  {isAdded ? 'به سبد خرید اضافه شد' : 'افزودن به سبد خرید'}
+                  <span className="text-xl lg:text-2xl">{isAdded ? '✅' : '🛒'}</span>
+                  {isAdded ? 'به سبد اضافه شد' : 'افزودن به سبد خرید'}
                 </button>
-                <Link href="https://wa.me/989143421641" target="_blank" className="w-full h-18 rounded-2xl border-2 border-border bg-background flex items-center justify-center gap-4 font-black text-sm text-foreground hover:bg-muted transition-all active:scale-95 shadow-sm">
+                <Link href="https://wa.me/989143421641" target="_blank" className="h-16 lg:h-18 rounded-2xl border-2 border-border bg-background flex items-center justify-center gap-3 font-black text-xs lg:text-sm text-foreground hover:bg-muted transition-all active:scale-95">
                   <span>💬</span>
-                  مشاوره تخصصی در واتس‌اپ
+                  مشاوره تخصصی
                 </Link>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-               <div className="p-5 rounded-[2rem] border border-border bg-secondary flex items-center gap-4 group hover:border-primary/20 transition-all">
-                  <span className="text-2xl group-hover:scale-110 transition-transform">🛡️</span>
-                  <span className="text-[11px] font-black leading-tight text-muted-foreground uppercase">ضمانت ۲۵ ساله آسو شنو</span>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+               <div className="p-4 lg:p-5 rounded-2xl lg:rounded-[2rem] border border-border bg-secondary/50 flex items-center gap-3 group hover:border-primary/20 transition-all">
+                  <span className="text-xl group-hover:scale-110 transition-transform">🛡️</span>
+                  <span className="text-[10px] font-black leading-tight text-muted-foreground uppercase">ضمانت ۲۵ ساله</span>
                </div>
-               <div className="p-5 rounded-[2rem] border border-border bg-secondary flex items-center gap-4 group hover:border-primary/20 transition-all">
-                  <span className="text-2xl group-hover:scale-110 transition-transform">✈️</span>
-                  <span className="text-[11px] font-black leading-tight text-muted-foreground uppercase">ارسال بیمه‌شده سراسری</span>
+               <div className="p-4 lg:p-5 rounded-2xl lg:rounded-[2rem] border border-border bg-secondary/50 flex items-center gap-3 group hover:border-primary/20 transition-all">
+                  <span className="text-xl group-hover:scale-110 transition-transform">✈️</span>
+                  <span className="text-[10px] font-black leading-tight text-muted-foreground uppercase">ارسال بیمه‌شده</span>
                </div>
             </div>
           </div>
         </div>
 
         {/* Dynamic Specs Section */}
-        <div className="space-y-16">
-          <div className="flex items-center gap-6">
-             <h2 className="text-3xl sm:text-4xl font-estedad text-foreground tracking-tight">بررسی فنی و مشخصات</h2>
+        <div className="space-y-10 lg:space-y-12">
+          <div className="flex items-center gap-4">
+             <h2 className="text-2xl sm:text-3xl font-estedad text-foreground tracking-tight">مشخصات فنی</h2>
              <div className="flex-1 h-px bg-border"></div>
           </div>
 
           {specs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-2 sm:px-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-1 sm:px-0">
               {specs.map((spec: any, index: number) => (
-                <div key={index} className={`bento-card p-10 flex flex-col justify-between min-h-[220px] transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 group ${index === 0 ? 'lg:col-span-2 lg:row-span-2 bg-slate-900 dark:bg-indigo-950 text-white border-none shadow-2xl relative overflow-hidden' : 'bg-card'}`}>
-                  {index === 0 && (
-                     <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-[80px] -translate-y-20 translate-x-20"></div>
-                  )}
-                  <div className="space-y-2">
-                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${index === 0 ? 'text-indigo-400' : 'text-muted-foreground'}`}>{spec.key}</span>
-                     <div className={`h-1 w-8 rounded-full transition-all duration-500 group-hover:w-16 ${index === 0 ? 'bg-indigo-500' : 'bg-primary/30'}`}></div>
+                <div key={index} className="bento-card p-5 sm:p-6 flex items-center justify-between min-h-[80px] sm:min-h-[100px] transition-all duration-300 hover:border-primary/20 bg-card group">
+                  <div className="space-y-1 text-right">
+                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block group-hover:text-primary transition-colors">{spec.key}</span>
+                     <span className="text-sm sm:text-base font-black text-foreground">
+                        {spec.value || 'وارد نشده'}
+                     </span>
                   </div>
-                  <span className={`text-xl sm:text-2xl font-black mt-8 leading-tight tracking-tight ${index === 0 ? 'text-white' : 'text-foreground'}`}>
-                      {spec.value || 'وارد نشده'}
-                  </span>
+                  <div className="h-8 w-8 rounded-lg bg-secondary flex items-center justify-center opacity-40 group-hover:opacity-100 transition-all">
+                     <span className="text-xs">⚡</span>
+                  </div>
                 </div>
               ))}
 
-              {/* Trust Bento Card */}
-              <div className="lg:col-span-2 bg-linear-to-br from-primary to-indigo-700 p-10 rounded-[3rem] text-white flex flex-col justify-center relative overflow-hidden shadow-2xl shadow-primary/20 group">
-                 <div className="absolute -left-10 -bottom-10 text-[12rem] opacity-10 font-black italic rotate-12 group-hover:rotate-0 transition-transform duration-1000">ASO</div>
-                 <div className="relative z-10 space-y-6">
-                    <h4 className="text-3xl font-estedad">ضمانت‌نامه طلایی آسو شنو</h4>
-                    <p className="text-sm font-medium opacity-80 leading-loose max-w-md">
-                       تمامی لپ‌تاپ‌های ارائه شده در ویترین ما، پس از عبور از فیلترهای سخت‌گیرانه کارشناسان فنی در دبی و اشنویه، با برچسب اصالت و ضمانت‌نامه کتبی ۲۵ ساله عرضه می‌شوند.
+              {/* Trust Card (Compact) */}
+              <div className="sm:col-span-2 bg-linear-to-br from-primary to-indigo-700 p-6 sm:p-8 rounded-[2rem] text-white flex flex-col justify-center relative overflow-hidden shadow-xl shadow-primary/20 group">
+                 <div className="absolute -left-6 -bottom-6 text-7xl opacity-10 font-black italic rotate-12 group-hover:rotate-0 transition-transform duration-1000">ASO</div>
+                 <div className="relative z-10 space-y-3">
+                    <h4 className="text-xl sm:text-2xl font-estedad">ضمانت‌نامه طلایی</h4>
+                    <p className="text-[11px] sm:text-xs font-medium opacity-80 leading-relaxed max-w-sm">
+                       تمامی لپ‌تاپ‌های آسو شنو پس از تست‌های سخت‌گیرانه در دبی و اشنویه، با ضمانت‌نامه ۲۵ ساله عرضه می‌شوند.
                     </p>
                  </div>
               </div>
             </div>
           ) : (
-            <div className="p-20 text-center bg-card rounded-[3rem] border border-dashed border-border text-muted-foreground font-black uppercase tracking-widest">
-               مشخصات فنی برای این محصول ثبت نشده است.
+            <div className="p-12 text-center bg-card rounded-[2rem] border border-dashed border-border text-muted-foreground font-black text-xs uppercase tracking-widest">
+               مشخصاتی ثبت نشده است.
             </div>
           )}
         </div>
@@ -296,7 +304,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-10 animate-fade-in" onClick={() => setIsLightboxOpen(false)}>
           <button className="absolute top-8 right-8 text-4xl text-foreground z-[110]" onClick={() => setIsLightboxOpen(false)}>✕</button>
           <div className="relative w-full h-full max-w-6xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
-            <Image
+            <SafeImage
               src={product.images[activeImage]}
               alt=""
               fill

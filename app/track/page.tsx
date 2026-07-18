@@ -11,13 +11,15 @@ export default function TrackingPage() {
 
         <div className="flex flex-col gap-10">
           {/* Tracking Input */}
-          <div className="bg-card border border-border rounded-[2.5rem] p-8 lg:p-10 shadow-sm flex flex-col md:flex-row items-center gap-6">
-            <input
-              type="text"
-              placeholder="کد رهگیری (مثلاً: AS-12345)"
-              className="flex-1 w-full bg-secondary border border-border rounded-2xl px-8 py-5 text-center font-black tracking-widest text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-xl"
-            />
-            <button className="w-full md:w-auto px-12 py-5 rounded-2xl bg-foreground text-background font-black transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/5 whitespace-nowrap">
+          <div className="bg-card border border-border rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 lg:p-10 shadow-sm flex flex-col md:flex-row items-center gap-4 sm:gap-6">
+            <div className="relative flex-1 w-full group">
+              <input
+                type="text"
+                placeholder="کد رهگیری (مثلاً: AS-12345)"
+                className="w-full bg-secondary border border-border rounded-xl sm:rounded-2xl px-6 sm:px-8 py-4 sm:py-5 text-center font-black tracking-widest text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-lg sm:text-xl outline-none"
+              />
+            </div>
+            <button className="w-full md:w-auto px-10 sm:px-12 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-foreground text-background font-black transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-black/5 whitespace-nowrap text-sm sm:text-base">
               بررسی وضعیت
             </button>
           </div>
@@ -29,9 +31,9 @@ export default function TrackingPage() {
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">شماره پرونده مشتری</p>
                 <h2 className="text-3xl font-black mt-2 text-foreground">AS-98745</h2>
               </div>
-              <div className="text-right">
+                <div className="text-right">
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">نام دستگاه و مدل</p>
-                <h2 className="text-2xl font-black mt-2 text-foreground">MacBook Pro 14" (2021)</h2>
+                <h2 className="text-2xl font-black mt-2 text-foreground">MacBook Pro 14&quot; (2021)</h2>
               </div>
             </div>
 

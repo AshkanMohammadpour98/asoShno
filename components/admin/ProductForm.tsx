@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createProduct } from '@/lib/actions/products';
+import { formatPrice, parsePrice, toEnglishDigits } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -17,6 +18,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ categories, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [price, setPrice] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -25,7 +27,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ categories, onSuccess }) => {
 
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
-    const price = Number(formData.get('price'));
     const description = formData.get('description') as string;
     const category_id = formData.get('category_id') as string;
     const image_file = formData.get('image') as File;
@@ -33,13 +34,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ categories, onSuccess }) => {
     try {
       const result = await createProduct({
         name,
-        price,
+        price: parsePrice(price),
         description,
         category_id: category_id || undefined,
         main_image: image_file.size > 0 ? image_file : null,
         gallery_images: [],
         shippingType: 'PAID', // Default value
       });
+// ... (omitted rest for brevity, but I will replace the whole block)
 
       if (result.success) {
         setMessage({ type: 'success', text: 'محصول با موفقیت ثبت شد.' });
@@ -79,7 +81,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ categories, onSuccess }) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">قیمت (تومان)</label>
-          <input name="price" type="number" required className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+          <input
+            name="price"
+            type="text"
+            required
+            value={price}
+            onChange={(e) => {
+              const engVal = toEnglishDigits(e.target.value);
+              const numeric = engVal.replace(/[^0-9]/g, '');
+              setPrice(formatPrice(numeric));
+            }}
+            placeholder="مثلا: 1,200,000"
+            className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">دسته‌بندی</label>

@@ -41,6 +41,7 @@ model Product {
   price         Float
   purchasePrice Float?      // قیمت خرید (مخصوص ادمین)
   stock         Int         @default(0) // کل موجودی
+  isFeatured    Boolean     @default(false)
   featuredImage String?
   images        String[]    @default([])
   specs         Json?       // ذخیره ویژگی‌ها به صورت JSON
@@ -48,6 +49,7 @@ model Product {
   shippingType  String      @default("PAID") // "FREE" | "PAID"
 
   variants      ProductVariant[]
+  wishlists     Wishlist[]
 
   categoryId    String?
   category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -65,9 +67,21 @@ model ProductVariant {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   colorName String
   colorCode String?
+  price     Float?   // قیمت اختصاصی این تنوع (اختیاری)
   stock     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 model BlogCategory {
@@ -115,12 +129,13 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(uuid())
+  id            String     @id @default(uuid())
   firstName     String
   lastName      String
-  phone         String    @unique
+  phone         String     @unique
   password      String
-  role          Role      @default(CUSTOMER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          Role       @default(CUSTOMER)
+  wishlists     Wishlist[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }

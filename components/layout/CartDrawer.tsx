@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '../providers/CartProvider';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { formatPrice } from '@/lib/utils';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Original Stock 🇦🇪</p>
                   </Link>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="font-black text-base sm:text-lg text-foreground">{item.price.toLocaleString()} تومان</span>
+                    <span className="font-black text-base sm:text-lg text-foreground">{formatPrice(item.price)} تومان</span>
                     <div className="flex items-center gap-4 bg-muted rounded-xl px-3 py-1.5 border border-border">
                       <button
                         onClick={() => updateQty(item.id, item.qty - 1, item.colorName)}
@@ -84,7 +85,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground font-bold">جمع کل اقلام:</span>
-                <span className="font-black text-foreground tracking-tight">{totalAmount.toLocaleString()} تومان</span>
+                <span className="font-black text-foreground tracking-tight">{formatPrice(totalAmount)} تومان</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground font-bold">هزینه ارسال:</span>
@@ -97,7 +98,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               <div className="pt-6 border-t border-border flex justify-between items-end">
                 <span className="font-estedad text-2xl text-foreground">مبلغ نهایی</span>
                 <div className="text-left" dir="ltr">
-                  <span className="font-black text-2xl sm:text-3xl text-primary block leading-none">{totalAmount.toLocaleString()}</span>
+                  <span className="font-black text-2xl sm:text-3xl text-primary block leading-none">{formatPrice(totalAmount)}</span>
                   <small className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2 block">Toman</small>
                 </div>
               </div>

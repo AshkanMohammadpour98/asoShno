@@ -15,7 +15,15 @@ export async function getSiteSettings() {
   }
 }
 
-export async function updateSiteSettings(settings: SiteSettings, files?: { heroImage?: File, logo?: File, banners?: { index: number, file: File }[] }) {
+export async function updateSiteSettings(
+  settings: SiteSettings,
+  files?: {
+    heroImage?: File,
+    logo?: File,
+    banners?: { index: number, file: File }[],
+    services?: { index: number, file: File }[]
+  }
+) {
   try {
     const currentSettings = { ...settings };
     const existing = await prisma.siteSettings.findUnique({ where: { id: 'main' } });
@@ -23,7 +31,6 @@ export async function updateSiteSettings(settings: SiteSettings, files?: { heroI
     // Handle Hero Image Upload
     if (files?.heroImage) {
       if (existing?.settings && (existing.settings as any).home?.heroImage) {
-          // Note: SiteSettings in DB might store keys or URLs. We handle both.
           await deleteS3Object((existing.settings as any).home.heroImage);
       }
       const key = await uploadSystemImage('hero', files.heroImage);
@@ -48,6 +55,19 @@ export async function updateSiteSettings(settings: SiteSettings, files?: { heroI
         const key = await uploadSystemImage('settings', b.file);
         if (currentSettings.home.banners[b.index]) {
           currentSettings.home.banners[b.index].image = key;
+        }
+      }
+    }
+
+    // Handle Services Images Upload
+    if (files?.services) {
+      for (const s of files.services) {
+        if (currentSettings.home.services[s.index]?.image) {
+          await deleteS3Object(currentSettings.home.services[s.index].image);
+        }
+        const key = await uploadSystemImage('hero', s.file);
+        if (currentSettings.home.services[s.index]) {
+          currentSettings.home.services[s.index].image = key;
         }
       }
     }

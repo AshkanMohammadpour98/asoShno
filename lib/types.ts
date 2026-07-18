@@ -18,6 +18,7 @@ export interface LocalProductVariant {
   id?: string;
   colorName: string;
   colorCode?: string;
+  price?: string | number;
   stock: number;
 }
 
@@ -28,6 +29,7 @@ export interface LocalProduct {
   price: string;
   purchasePrice?: string; // مخصوص ادمین
   shippingType: 'FREE' | 'PAID';
+  isFeatured?: boolean;
   category_id?: string;
   brand_id?: string;
   images: string[];
@@ -68,6 +70,27 @@ export interface SiteSettings {
       link: string;
       image: string;
     }[];
+    servicesTitle: string;
+    servicesSubtitle: string;
+    services: {
+      title: string;
+      description: string;
+      icon: string;
+      image?: string;
+      badge?: string;
+      className?: string;
+    }[];
+    repairTitle: string;
+    repairSubtitle: string;
+    repairSteps: {
+      title: string;
+      description: string;
+      icon: string;
+    }[];
+    ctaTitle: string;
+    ctaSubtitle: string;
+    ctaButtonText: string;
+    ctaButtonLink: string;
   };
   footer: {
     aboutText: string;

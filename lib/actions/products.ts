@@ -15,13 +15,15 @@ import {
   deleteLocalBrand,
   getLocalAttributes,
   addLocalAttribute,
-  deleteLocalAttribute
+  deleteLocalAttribute,
+  getFeaturedProducts
 } from '../db';
 import { LocalProduct } from '../types';
 import { uploadProductImage, deleteS3Object, deleteProductImages, getImageUrl } from '../upload-image';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '../prisma';
 import crypto from 'crypto';
+import { toEnglishDigits } from '../utils';
 
 export type ProductInput = {
   name: string;
@@ -29,11 +31,12 @@ export type ProductInput = {
   price: string | number;
   purchasePrice?: string | number;
   shippingType: 'FREE' | 'PAID';
+  isFeatured?: boolean;
   category_id?: string;
   brand_id?: string;
   main_image: File | string | null;
   gallery_images: (File | string | null)[];
-  variants?: { colorName: string, colorCode?: string, stock: number }[];
+  variants?: { colorName: string, colorCode?: string, price?: string | number, stock: number }[];
 
   // Dynamic specs
   specs?: { key: string, value: string }[];
@@ -41,17 +44,23 @@ export type ProductInput = {
 };
 
 /**
- * Helper to convert Persian/Arabic digits to English digits
- */
-function toEnglishDigits(str: string): string {
-  if (!str) return "";
-  return str.replace(/[۰-۹]/g, (d) => (d.charCodeAt(0) - 1776).toString())
-            .replace(/[٠-٩]/g, (d) => (d.charCodeAt(0) - 1632).toString());
-}
-
-/**
  * Products Actions
  */
+export async function getFeaturedProductsAction() {
+  try {
+    const data = await getFeaturedProducts(4);
+    const enhancedData = await Promise.all(data.map(async (product) => {
+      const signedImages = await Promise.all(
+        product.images.map(img => getImageUrl(img))
+      );
+      return { ...product, images: signedImages };
+    }));
+    return { success: true, data: enhancedData };
+  } catch (e) {
+    console.error('getFeaturedProductsAction Error:', e);
+    return { success: false, error: 'خطا در دریافت محصولات پیشنهادی' };
+  }
+}
 export async function getProducts(filters?: {
   search?: string;
   category?: string;
@@ -94,6 +103,25 @@ export async function getProductById(id: string) {
   } catch (error) {
     console.error('getProductById Error:', error);
     return { success: false, error: 'خطا در دریافت اطلاعات محصول.' };
+  }
+}
+
+export async function getProductsByIds(ids: string[]) {
+  try {
+    const allProducts = await getLocalProducts();
+    const filtered = allProducts.filter(p => ids.includes(p.id));
+
+    const enhancedData = await Promise.all(filtered.map(async (product) => {
+      const signedImages = await Promise.all(
+        product.images.map(img => getImageUrl(img))
+      );
+      return { ...product, images: signedImages };
+    }));
+
+    return { success: true, data: enhancedData };
+  } catch (error) {
+    console.error('getProductsByIds Error:', error);
+    return { success: false, error: 'خطا در دریافت محصولات.' };
   }
 }
 
@@ -252,6 +280,7 @@ export async function createProduct(input: ProductInput) {
       description: input.description,
       price: cleanPrice,
       purchasePrice: input.purchasePrice ? String(input.purchasePrice) : undefined,
+      isFeatured: input.isFeatured,
       shippingType: input.shippingType,
       category_id: input.category_id,
       brand_id: input.brand_id,
@@ -290,6 +319,7 @@ export async function updateProduct(id: string, input: ProductInput) {
       description: input.description,
       price: cleanPrice,
       purchasePrice: input.purchasePrice ? String(input.purchasePrice) : undefined,
+      isFeatured: input.isFeatured,
       shippingType: input.shippingType,
       category_id: input.category_id,
       brand_id: input.brand_id,

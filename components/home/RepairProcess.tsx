@@ -1,40 +1,19 @@
 import React from 'react';
+import type { SiteSettings } from '@/lib/types';
 
-const steps = [
-  {
-    title: "ثبت درخواست",
-    description: "اطلاعات دستگاه و مشکل آن را به صورت آنلاین ثبت کنید.",
-    icon: "📝",
-  },
-  {
-    title: "تحویل دستگاه",
-    description: "دستگاه را حضوری یا با پیک به ما برسانید.",
-    icon: "📦",
-  },
-  {
-    title: "عیب‌یابی تخصصی",
-    description: "کارشناسان ما مشکل را بررسی و هزینه را اعلام می‌کنند.",
-    icon: "🔍",
-  },
-  {
-    title: "تعمیر و تست",
-    description: "تعمیر تخصصی انجام شده و دستگاه کاملاً تست می‌شود.",
-    icon: "🛠️",
-  },
-  {
-    title: "تحویل نهایی",
-    description: "دستگاه صحیح و سالم با گارانتی تعمیر تحویل داده می‌شود.",
-    icon: "✅",
-  },
-];
+interface RepairProcessProps {
+  settings: SiteSettings;
+}
 
-const RepairProcess = () => {
+const RepairProcess = ({ settings }: RepairProcessProps) => {
+  const steps = settings.home.repairSteps;
+
   return (
     <section className="py-12 sm:py-20 bg-secondary/50 transition-colors duration-300">
       <div className="container mx-auto px-4 text-right" dir="rtl">
         <div className="mb-10 sm:mb-16 text-center">
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">روند تعمیرات</h2>
-          <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-muted-foreground font-medium leading-relaxed">سریع، شفاف و قابل اعتماد با ۲۵ سال سابقه تخصصی در اشنویه</p>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">{settings.home.repairTitle}</h2>
+          <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-muted-foreground font-medium leading-relaxed">{settings.home.repairSubtitle}</p>
         </div>
 
         <div className="relative">

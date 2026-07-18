@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import SafeImage from '@/components/common/SafeImage';
 import ProductSkeleton from '@/components/shop/ProductSkeleton';
 import { getProducts, getCategories, getBrands } from '@/lib/actions/products';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { formatPrice } from '@/lib/utils';
 import type { LocalProduct, LocalCategory, LocalBrand } from '@/lib/types';
 
 export default function ShopPage() {
@@ -72,50 +73,53 @@ export default function ShopPage() {
           <p className="text-muted-foreground text-lg max-w-2xl font-medium">تکنولوژی روز اروپا و آمریکا، مستقیماً از بازارهای دبی تا شهرستان اشنویه.</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
 
           {/* Mobile Filter Toggle */}
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="lg:hidden flex items-center justify-center gap-3 w-full h-16 rounded-[2rem] bg-card font-black border border-border shadow-sm text-foreground transition-all active:scale-95"
+            className="lg:hidden flex items-center justify-center gap-3 w-full h-14 rounded-2xl bg-card font-black border border-border shadow-sm text-foreground transition-all active:scale-95"
           >
-            <span className="text-xl">🔍</span>
-            <span>{showMobileFilters ? 'بستن فیلترها' : 'جستجوی هوشمند و فیلتر'}</span>
+            <span className="text-lg">🔍</span>
+            <span className="text-sm">{showMobileFilters ? 'بستن فیلترها' : 'جستجوی هوشمند و فیلتر'}</span>
           </button>
 
           {/* Sidebar Filters */}
-          <aside className={`${showMobileFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80 space-y-8 sticky top-24 h-fit animate-fade-in`}>
-            <div className="bg-card border border-border rounded-[3rem] p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-10">
-                 <h3 className="text-xl font-bold tracking-tight text-foreground">فیلترهای دقیق</h3>
+          <aside className={`${showMobileFilters ? 'block' : 'hidden'} lg:block w-full lg:w-72 space-y-6 lg:sticky lg:top-24 h-fit animate-fade-in`}>
+            <div className="bg-card border border-border rounded-[2.5rem] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                 <h3 className="text-lg font-bold tracking-tight text-foreground">فیلترهای دقیق</h3>
                  <button
                   onClick={clearFilters}
-                  className="text-[10px] font-black text-primary uppercase tracking-widest hover:opacity-70"
+                  className="text-[9px] font-black text-primary uppercase tracking-widest hover:opacity-70"
                  >
                     پاکسازی
                  </button>
               </div>
 
-              <div className="space-y-10">
+              <div className="space-y-8">
                 {/* Search in Shop */}
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">جستجوی متنی</label>
-                  <input
-                    type="text"
-                    placeholder="چی لازم داری؟..."
-                    value={search}
-                    onChange={(e) => updateFilter('search', e.target.value)}
-                    className="w-full h-12 bg-muted/50 rounded-2xl px-6 font-bold text-xs outline-none border-2 border-transparent focus:border-primary"
-                  />
+                <div className="space-y-3">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block mb-4 mr-1">جستجوی متنی</label>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="چی لازم داری؟..."
+                      value={search}
+                      onChange={(e) => updateFilter('search', e.target.value)}
+                      className="w-full h-11 bg-muted/50 rounded-xl px-10 font-bold text-[11px] outline-none border-2 border-transparent focus:border-primary focus:bg-card transition-all"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-base opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                  </div>
                 </div>
 
                 {/* Brand Filter */}
                 <div>
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">برند</label>
-                  <div className="space-y-3">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block mb-4 mr-1">برند</label>
+                  <div className="space-y-2">
                     <button
                       onClick={() => updateFilter('brand', '')}
-                      className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${!brand ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                      className={`w-full text-right px-3 py-2 rounded-lg text-xs font-bold transition-all ${!brand ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted'}`}
                     >
                       همه برندها
                     </button>
@@ -123,7 +127,7 @@ export default function ShopPage() {
                       <button
                         key={b.id}
                         onClick={() => updateFilter('brand', b.id)}
-                        className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${brand === b.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                        className={`w-full text-right px-3 py-2 rounded-lg text-xs font-bold transition-all ${brand === b.id ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted'}`}
                       >
                         {b.name}
                       </button>
@@ -133,11 +137,11 @@ export default function ShopPage() {
 
                 {/* Category Filter */}
                 <div>
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-5 mr-1">دسته‌بندی</label>
-                  <div className="space-y-3">
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block mb-4 mr-1">دسته‌بندی</label>
+                  <div className="space-y-2">
                     <button
                       onClick={() => updateFilter('category', '')}
-                      className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${!category ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                      className={`w-full text-right px-3 py-2 rounded-lg text-xs font-bold transition-all ${!category ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted'}`}
                     >
                       همه دسته‌ها
                     </button>
@@ -145,7 +149,7 @@ export default function ShopPage() {
                       <button
                         key={cat.id}
                         onClick={() => updateFilter('category', cat.id)}
-                        className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${category === cat.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
+                        className={`w-full text-right px-3 py-2 rounded-lg text-xs font-bold transition-all ${category === cat.id ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted'}`}
                       >
                         {cat.name}
                       </button>
@@ -173,7 +177,7 @@ export default function ShopPage() {
                 products.map((product) => (
                   <Link href={`/shop/product/${product.id}`} key={product.id} className="bento-card group p-5 border-border bg-card flex flex-col hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500">
                     <div className="aspect-[4/3] rounded-[2rem] bg-muted/50 mb-6 flex items-center justify-center relative overflow-hidden border border-transparent group-hover:border-primary/20 transition-all duration-700">
-                        <Image
+                        <SafeImage
                           src={product.images?.[0] || '/logo/logo.png'}
                           alt={product.name}
                           fill
@@ -208,7 +212,13 @@ export default function ShopPage() {
                       <div className="mt-auto flex items-center justify-between pt-6 border-t border-border">
                         <div className="flex flex-col">
                           <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-1">قیمت نهایی</span>
-                          <span className="font-black text-2xl text-foreground leading-none tracking-tight">{Number(product.price).toLocaleString()} <small className="text-[10px] font-normal mr-1 text-muted-foreground">تومان</small></span>
+                          <span className="font-black text-2xl text-foreground leading-none tracking-tight">
+                            {product.variants && product.variants.some(v => v.price && Number(v.price) !== Number(product.price))
+                              ? `از ${formatPrice(Math.min(Number(product.price), ...product.variants.filter(v => v.price).map(v => Number(v.price))))}`
+                              : formatPrice(product.price)
+                            }
+                            <small className="text-[10px] font-normal mr-1 text-muted-foreground">تومان</small>
+                          </span>
                         </div>
                         <div className="h-14 w-14 rounded-[1.5rem] bg-primary text-primary-foreground flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-6 shadow-lg shadow-primary/20 active:scale-90 relative overflow-hidden">
                           <span className="text-2xl z-10">🛒</span>

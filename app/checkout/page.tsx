@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { formatPrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const { items, totalAmount, totalCount } = useCart();
@@ -83,7 +84,7 @@ export default function CheckoutPage() {
                             </div>
                             <div className="text-center sm:text-left">
                                 <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">قیمت واحد</p>
-                                <span className="font-black text-xl text-foreground">{item.price.toLocaleString()} <small className="text-[10px] font-normal mr-1">تومان</small></span>
+                                <span className="font-black text-xl text-foreground">{formatPrice(item.price)} <small className="text-[10px] font-normal mr-1">تومان</small></span>
                             </div>
                         </div>
                     ))}
@@ -122,7 +123,7 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground font-bold">جمع کل اقلام</span>
-                        <span className="font-black text-foreground">{totalAmount.toLocaleString()} تومان</span>
+                        <span className="font-black text-foreground">{formatPrice(totalAmount)} تومان</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground font-bold">هزینه ارسال</span>
@@ -137,7 +138,7 @@ export default function CheckoutPage() {
                         <div className="flex justify-between items-end">
                             <span className="font-estedad text-2xl text-foreground">مبلغ نهایی</span>
                             <div className="text-left" dir="ltr">
-                                <span className="font-black text-3xl text-primary block leading-none">{totalAmount.toLocaleString()}</span>
+                                <span className="font-black text-3xl text-primary block leading-none">{formatPrice(totalAmount)}</span>
                                 <small className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2 block">Toman</small>
                             </div>
                         </div>

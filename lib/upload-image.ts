@@ -141,7 +141,7 @@ export async function uploadS3Object(key: string, file: Buffer | Uint8Array, con
 /**
  * Delete Object and Folders
  */
-export async function deleteS3Object(key: string) {
+export async function deleteS3Object(key: string | null | undefined) {
     if (!key) return;
     const cleanKey = getCleanKey(key);
 

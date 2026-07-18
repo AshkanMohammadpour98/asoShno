@@ -1,37 +1,15 @@
 import React from 'react';
 import Image from 'next/image';
+import type { SiteSettings } from '@/lib/types';
+import { getPublicImageUrl } from '@/lib/upload-image';
 
-const services = [
-  {
-    title: "واردات مستقیم از دبی",
-    description: "حذف واسطه‌ها و ارائه بهترین قیمت برای لپ‌تاپ‌های گرید A++.",
-    icon: "🇦🇪",
-    image: "/hero/imglap-1.png",
-    className: "md:col-span-2 md:row-span-2 bg-primary text-primary-foreground border-none shadow-primary/10",
-    badge: "تخصص ما"
-  },
-  {
-    title: "تعمیرات فوق تخصصی",
-    description: "عیب‌یابی و تعمیر مادربرد و گرافیک با ۲۵ سال سابقه فنی.",
-    icon: "🔬",
-    className: "md:col-span-1 md:row-span-1 bg-card border-border text-foreground",
-  },
-  {
-    title: "ارتقا سریع سیستم",
-    description: "نصب SSD و RAM اورجینال در کمتر از ۳۰ دقیقه.",
-    icon: "⚡",
-    className: "md:col-span-1 md:row-span-1 bg-card border-border text-foreground",
-  },
-  {
-    title: "ارسال به سراسر ایران",
-    description: "ارسال ایمن با تیپاکس به تمام نقاط کشور در کمترین زمان.",
-    icon: "📦",
-    image: "/hero/imglap-2.png",
-    className: "md:col-span-2 md:row-span-1 bg-secondary text-secondary-foreground border-border shadow-sm",
-  },
-];
+interface ServicesBentoProps {
+  settings: SiteSettings;
+}
 
-const ServicesBento = () => {
+const ServicesBento = ({ settings }: ServicesBentoProps) => {
+  const services = settings.home.services;
+
   return (
     <section className="py-12 sm:py-24 relative overflow-hidden bg-background transition-colors duration-300">
       {/* Decorative Background Elements */}
@@ -41,10 +19,17 @@ const ServicesBento = () => {
         <div className="mb-12 sm:mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="max-w-2xl text-center md:text-right">
             <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
-              چرا <span className="gradient-text">آسو شنو؟</span>
+              {settings.home.servicesTitle.split('آسو شنو').map((part, index, array) => (
+                <React.Fragment key={index}>
+                  {part}
+                  {index < array.length - 1 && (
+                    <span className="gradient-text">آسو شنو</span>
+                  )}
+                </React.Fragment>
+              ))}
             </h2>
             <p className="mt-4 sm:mt-6 text-base sm:text-xl text-muted-foreground font-medium leading-relaxed opacity-80">
-              تمایز ما در اصالت کالا و تخصص ۲۵ ساله ما در بازار تکنولوژی اشنویه و خاورمیانه است.
+              {settings.home.servicesSubtitle}
             </p>
           </div>
           <div className="flex justify-center gap-4 sm:gap-6">
@@ -61,13 +46,14 @@ const ServicesBento = () => {
 
         <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:grid-rows-3 px-2 sm:px-0">
           {services.map((service, index) => {
-            const isPrimaryCard = service.className.includes('bg-primary');
+            const className = service.className || (index === 0 ? "md:col-span-2 md:row-span-2 bg-primary text-primary-foreground border-none shadow-primary/10" : "bg-card border-border text-foreground");
+            const isPrimaryCard = className.includes('bg-primary');
             const hasImage = !!service.image;
 
             return (
               <div
                 key={index}
-                className={`bento-card group flex flex-col justify-end min-h-[280px] sm:min-h-[320px] p-8 sm:p-12 shadow-sm relative overflow-hidden border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 ${service.className}`}
+                className={`bento-card group flex flex-col justify-end min-h-[280px] sm:min-h-[320px] p-8 sm:p-12 shadow-sm relative overflow-hidden border-2 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 ${className}`}
               >
                 {/* Micro-dot background pattern */}
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]"></div>
@@ -87,7 +73,7 @@ const ServicesBento = () => {
                         : "-left-16 -bottom-24 w-[65%] h-[140%] rotate-[-8deg] z-10"
                     }`}>
                       <Image
-                        src={service.image!}
+                        src={getPublicImageUrl(service.image!)}
                         alt={service.title}
                         fill
                         className="object-contain object-left-bottom drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
