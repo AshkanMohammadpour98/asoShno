@@ -29,3 +29,33 @@ export function toEnglishDigits(str: string): string {
   return str.replace(/[۰-۹]/g, (d) => (d.charCodeAt(0) - 1776).toString())
             .replace(/[٠-٩]/g, (d) => (d.charCodeAt(0) - 1632).toString());
 }
+
+/**
+ * Formats a date to Persian (Shamsi) string
+ */
+export function formatJalaliDate(date: Date | string | undefined): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+
+  return new Intl.DateTimeFormat('fa-IR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(d);
+}
+
+/**
+ * Formats a date to Persian (Shamsi) short string (YYYY/MM/DD)
+ */
+export function formatJalaliShort(date: Date | string | undefined): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+
+  return new Intl.DateTimeFormat('fa-IR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+}

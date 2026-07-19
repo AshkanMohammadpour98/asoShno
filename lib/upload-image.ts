@@ -38,6 +38,11 @@ function getCleanKey(input: string): string {
         }
     }
 
+    // Handle Internal Proxy URL: /api/media/path/to/file
+    if (key.startsWith('/api/media/')) {
+        return key.replace('/api/media/', '');
+    }
+
     return key.replace(/^\//, "");
 }
 
@@ -196,6 +201,10 @@ export async function deleteProductImages(productId: string) {
     await deleteS3Folder('products', productId);
 }
 
+export async function deleteAnnouncementImages(id: string) {
+    await deleteS3Folder('announcements', id);
+}
+
 export async function uploadPostImage(postId: string, file: File) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const extension = file.name.split('.').pop() || 'png';
@@ -203,9 +212,30 @@ export async function uploadPostImage(postId: string, file: File) {
     return await uploadS3Object(key, buffer, file.type);
 }
 
+export async function uploadAnnouncementImage(announcementId: string, file: File) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    // Use a fixed filename to make replacement/deletion easier
+    const key = `announcements/${announcementId}/cover.webp`;
+    return await uploadS3Object(key, buffer, 'image/webp');
+}
+
 export async function uploadSystemImage(folder: string, file: File) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const key = `${folder}/${crypto.randomUUID()}-${file.name}`;
+    const extension = file.name.split('.').pop() || 'png';
+    const key = `${folder}/${crypto.randomUUID()}.${extension}`;
+    return await uploadS3Object(key, buffer, file.type);
+}
+
+export async function uploadPWALogo(file: File) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const key = `logoPWA512/icon-512-${Date.now()}.png`;
+    return await uploadS3Object(key, buffer, 'image/png');
+}
+
+export async function uploadFavicon(file: File) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const extension = file.name.split('.').pop() || 'ico';
+    const key = `favicon/favicon-${Date.now()}.${extension}`;
     return await uploadS3Object(key, buffer, file.type);
 }
 

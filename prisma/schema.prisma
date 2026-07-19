@@ -139,3 +139,158 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
+
+model Announcement {
+  id           String    @id @default(uuid())
+  title        String
+  message      String
+  type         String    @default("INFO") // INFO, SUCCESS, WARNING, DANGER
+  displayMode  String    @default("SMALL") // SMALL (Banner), LARGE (Modal/Card)
+  imageUrl     String?
+  isActive     Boolean   @default(true)
+  startAt      DateTime?
+  endAt        DateTime?
+  dismissible  Boolean   @default(true)
+  priority     Int       @default(0)
+  ctaText      String?
+  ctaUrl       String?
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// --- Ledger (دفترچه حساب) Models ---
+
+enum LedgerAccountStatus {
+  OPEN
+  SETTLED
+  ARCHIVED
+}
+
+enum LedgerTransactionType {
+  DEBT_INCREASE       // افزایش بدهی (او به ما)
+  DEBT_DECREASE       // کاهش بدهی / طلب ما (ما به او)
+  PAYMENT_RECEIVED    // دریافت وجه
+  PAYMENT_PAID        // پرداخت وجه
+  DISCOUNT            // تخفیف
+  ADJUSTMENT_POSITIVE // اصلاح افزایشی
+  ADJUSTMENT_NEGATIVE // اصلاح کاهشی
+  RETURNED_GOODS      // برگشت کالا
+  INITIAL_BALANCE     // مانده اولیه
+}
+
+enum LedgerPaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  CHEQUE
+  OTHER
+}
+
+enum LedgerReminderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum LedgerReminderRepeat {
+  NONE
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model LedgerAccount {
+  id            String              @id @default(uuid())
+  firstName     String
+  lastName      String
+  phone         String?
+  title         String?             // عنوان یا نام مستعار
+  description   String?
+  status        LedgerAccountStatus @default(OPEN)
+  balance       Decimal             @default(0) // مانده فعلی (مثبت: او بدهکار، منفی: ما بدهکار)
+
+  transactions  LedgerTransaction[]
+  reminders     LedgerReminder[]
+  auditLogs     LedgerAuditLog[]
+
+  creatorId     String?
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([phone])
+  @@index([lastName, firstName])
+  @@index([status])
+}
+
+model LedgerTransaction {
+  id            String                @id @default(uuid())
+  accountId     String
+  account       LedgerAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  type          LedgerTransactionType
+  amount        Decimal               // مبلغ تراکنش (همیشه مثبت در اینجا، جهت توسط نوع تعیین می‌شود)
+  balanceBefore Decimal
+  balanceAfter  Decimal
+
+  subject       String?               // بابت
+  description   String?
+  transactionDate DateTime            @default(now()) // تاریخ مالی (انتخابی ادمین)
+
+  paymentMethod LedgerPaymentMethod?
+  refNumber     String?               // شماره پیگیری
+
+  items         LedgerTransactionItem[]
+
+  creatorId     String?
+  createdAt     DateTime              @default(now()) // تاریخ ثبت واقعی
+
+  @@index([accountId])
+  @@index([transactionDate])
+  @@index([type])
+}
+
+model LedgerTransactionItem {
+  id            String            @id @default(uuid())
+  transactionId String
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  title         String
+  quantity      Decimal           @default(1)
+  unitPrice     Decimal
+  totalPrice    Decimal
+
+  productId     String?           // ارتباط اختیاری با محصولات سایت
+}
+
+model LedgerReminder {
+  id            String               @id @default(uuid())
+  accountId     String
+  account       LedgerAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  title         String?
+  dueDate       DateTime
+  status        LedgerReminderStatus @default(PENDING)
+  repeat        LedgerReminderRepeat @default(NONE)
+
+  lastRemindedAt DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([accountId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model LedgerAuditLog {
+  id            String        @id @default(uuid())
+  accountId     String
+  account       LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  action        String        // e.g., "CREATE_ACCOUNT", "UPDATE_TRANSACTION"
+  details       Json
+
+  adminId       String?
+  createdAt     DateTime      @default(now())
+}

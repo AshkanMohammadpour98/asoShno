@@ -6,7 +6,8 @@ import {
   LocalAttribute,
   SiteSettings,
   BlogPost,
-  BlogCategory
+  BlogCategory,
+  Announcement
 } from './types';
 import { toEnglishDigits } from './utils';
 
@@ -435,6 +436,8 @@ export async function getLocalSettings(): Promise<SiteSettings> {
       general: {
         siteName: record.siteName || s?.general?.siteName || defaultSettings.general.siteName,
         logo: record.logo || s?.general?.logo || defaultSettings.general.logo,
+        pwaLogo: s?.general?.pwaLogo || defaultSettings.general.pwaLogo,
+        favicon: s?.general?.favicon || defaultSettings.general.favicon,
         siteTitle: s?.general?.siteTitle || record.siteName || defaultSettings.general.siteTitle,
         siteDescription: s?.general?.siteDescription || defaultSettings.general.siteDescription,
         siteKeywords: s?.general?.siteKeywords || defaultSettings.general.siteKeywords
@@ -669,6 +672,111 @@ export async function addLocalBlogCategory(name: string) {
 
 export async function deleteLocalBlogCategory(id: string) {
   await prisma.blogCategory.delete({
+    where: { id }
+  });
+}
+
+/**
+ * Announcements CRUD
+ */
+export async function getLocalAnnouncements(onlyActive = false) {
+  try {
+    const now = new Date();
+    const where: any = {};
+
+    if (onlyActive) {
+      where.isActive = true;
+      where.OR = [
+        { startAt: null },
+        { startAt: { lte: now } }
+      ];
+      where.AND = [
+        {
+          OR: [
+            { endAt: null },
+            { endAt: { gte: now } }
+          ]
+        }
+      ];
+    }
+
+    const announcements = await prisma.announcement.findMany({
+      where,
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    return announcements.map((a: any) => ({
+      ...a,
+      createdAt: a.createdAt.toISOString(),
+      updatedAt: a.updatedAt.toISOString(),
+      startAt: a.startAt?.toISOString(),
+      endAt: a.endAt?.toISOString()
+    })) as Announcement[];
+  } catch (error: any) {
+    console.error(`[DB] getLocalAnnouncements Error: ${error.code || 'unknown'} - ${error.message}`);
+    return [];
+  }
+}
+
+export async function addLocalAnnouncement(data: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) {
+  const newAnnouncement = await prisma.announcement.create({
+    data: {
+      id: data.id || undefined,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      displayMode: data.displayMode,
+      imageUrl: data.imageUrl,
+      isActive: data.isActive,
+      startAt: data.startAt ? new Date(data.startAt) : null,
+      endAt: data.endAt ? new Date(data.endAt) : null,
+      dismissible: data.dismissible,
+      priority: Number(data.priority) || 0,
+      ctaText: data.ctaText,
+      ctaUrl: data.ctaUrl
+    }
+  });
+
+  return {
+    ...newAnnouncement,
+    createdAt: newAnnouncement.createdAt.toISOString(),
+    updatedAt: newAnnouncement.updatedAt.toISOString(),
+    startAt: newAnnouncement.startAt?.toISOString(),
+    endAt: newAnnouncement.endAt?.toISOString()
+  } as Announcement;
+}
+
+export async function updateLocalAnnouncement(id: string, data: Partial<Announcement>) {
+  const updateData: any = { ...data };
+
+  if (data.startAt !== undefined) updateData.startAt = data.startAt ? new Date(data.startAt) : null;
+  if (data.endAt !== undefined) updateData.endAt = data.endAt ? new Date(data.endAt) : null;
+  if (data.priority !== undefined) updateData.priority = Number(data.priority) || 0;
+
+  // Remove fields that shouldn't be updated directly via this object if any
+  delete updateData.id;
+  delete updateData.createdAt;
+  delete updateData.updatedAt;
+
+  const updated = await prisma.announcement.update({
+    where: { id },
+    data: updateData
+  });
+
+  return {
+    ...updated,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+    startAt: updated.startAt?.toISOString(),
+    endAt: updated.endAt?.toISOString()
+  } as Announcement;
+}
+
+export async function deleteLocalAnnouncement(id: string) {
+  await prisma.announcement.delete({
     where: { id }
   });
 }

@@ -50,6 +50,8 @@ export interface SiteSettings {
     siteDescription: string;
     siteKeywords: string;
     logo?: string;
+    pwaLogo?: string;
+    favicon?: string;
   };
   contact: {
     phone: string;
@@ -130,4 +132,99 @@ export interface BlogPost {
   metaDescription?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'DANGER';
+  displayMode: 'SMALL' | 'LARGE';
+  imageUrl?: string;
+  isActive: boolean;
+  startAt?: string;
+  endAt?: string;
+  dismissible: boolean;
+  priority: number;
+  ctaText?: string;
+  ctaUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Ledger Types ---
+
+export type LedgerAccountStatus = 'OPEN' | 'SETTLED' | 'ARCHIVED';
+export type LedgerTransactionType =
+  | 'DEBT_INCREASE'
+  | 'DEBT_DECREASE'
+  | 'PAYMENT_RECEIVED'
+  | 'PAYMENT_PAID'
+  | 'DISCOUNT'
+  | 'ADJUSTMENT_POSITIVE'
+  | 'ADJUSTMENT_NEGATIVE'
+  | 'RETURNED_GOODS'
+  | 'INITIAL_BALANCE';
+
+export type LedgerPaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'CHEQUE' | 'OTHER';
+export type LedgerReminderStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
+export type LedgerReminderRepeat = 'NONE' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+
+export interface LedgerTransactionItem {
+  id: string;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  productId?: string | null;
+}
+
+export interface LedgerTransaction {
+  id: string;
+  accountId: string;
+  type: LedgerTransactionType;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  subject?: string | null;
+  description?: string | null;
+  transactionDate: string;
+  paymentMethod?: LedgerPaymentMethod | null;
+  refNumber?: string | null;
+  items: LedgerTransactionItem[];
+  createdAt: string;
+}
+
+export interface LedgerReminder {
+  id: string;
+  accountId: string;
+  title?: string | null;
+  dueDate: string;
+  status: LedgerReminderStatus;
+  repeat: LedgerReminderRepeat;
+  createdAt: string;
+}
+
+export interface LedgerAccount {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  title?: string | null;
+  description?: string | null;
+  status: LedgerAccountStatus;
+  balance: number;
+  transactions?: LedgerTransaction[];
+  reminders?: LedgerReminder[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LedgerStats {
+  totalDebtorsAmount: number;
+  totalCreditorsAmount: number;
+  openAccountsCount: number;
+  settledAccountsCount: number;
+  todayRemindersCount: number;
+  overdueRemindersCount: number;
 }

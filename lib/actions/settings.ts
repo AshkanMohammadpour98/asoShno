@@ -20,6 +20,8 @@ export async function updateSiteSettings(
   files?: {
     heroImage?: File,
     logo?: File,
+    pwaLogo?: File,
+    favicon?: File,
     banners?: { index: number, file: File }[],
     services?: { index: number, file: File }[]
   }
@@ -27,11 +29,12 @@ export async function updateSiteSettings(
   try {
     const currentSettings = { ...settings };
     const existing = await prisma.siteSettings.findUnique({ where: { id: 'main' } });
+    const existingSettings = existing?.settings as any;
 
     // Handle Hero Image Upload
     if (files?.heroImage) {
-      if (existing?.settings && (existing.settings as any).home?.heroImage) {
-          await deleteS3Object((existing.settings as any).home.heroImage);
+      if (existingSettings?.home?.heroImage) {
+          await deleteS3Object(existingSettings.home.heroImage);
       }
       const key = await uploadSystemImage('hero', files.heroImage);
       currentSettings.home.heroImage = key;
@@ -44,6 +47,26 @@ export async function updateSiteSettings(
       }
       const key = await uploadSystemImage('logo', files.logo);
       currentSettings.general.logo = key;
+    }
+
+    // Handle PWA Logo Upload
+    if (files?.pwaLogo) {
+      if (existingSettings?.general?.pwaLogo) {
+          await deleteS3Object(existingSettings.general.pwaLogo);
+      }
+      const { uploadPWALogo } = await import('../upload-image');
+      const key = await uploadPWALogo(files.pwaLogo);
+      currentSettings.general.pwaLogo = key;
+    }
+
+    // Handle Favicon Upload
+    if (files?.favicon) {
+      if (existingSettings?.general?.favicon) {
+          await deleteS3Object(existingSettings.general.favicon);
+      }
+      const { uploadFavicon } = await import('../upload-image');
+      const key = await uploadFavicon(files.favicon);
+      currentSettings.general.favicon = key;
     }
 
     // Handle Banners Upload

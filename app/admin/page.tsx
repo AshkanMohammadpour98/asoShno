@@ -31,10 +31,18 @@ import {
   createBlogCategory,
   deleteBlogCategory
 } from '@/lib/actions/blog';
-import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant } from '@/lib/types';
+import {
+  getAnnouncementsAction,
+  createAnnouncementAction,
+  updateAnnouncementAction,
+  deleteAnnouncementAction,
+  toggleAnnouncementAction
+} from '@/lib/actions/announcements';
+import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant, Announcement } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { formatPrice, parsePrice, toEnglishDigits } from '@/lib/utils';
 import ProductSelector from '@/components/shop/ProductSelector';
+import LedgerManager from '@/components/admin/LedgerManager';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -45,6 +53,12 @@ export default function AdminDashboard() {
   const [brands, setBrands] = useState<LocalBrand[]>([]);
   const [attributes, setAttributes] = useState<LocalAttribute[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Announcements State
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [isAddingAnnouncement, setIsAddingAnnouncement] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [announcementImagePreview, setAnnouncementImagePreview] = useState<string | null>(null);
 
   // UI State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -76,12 +90,16 @@ export default function AdminDashboard() {
   const [cmsFiles, setCmsFiles] = useState<{
     heroImage?: File,
     logo?: File,
+    pwaLogo?: File,
+    favicon?: File,
     banners: {index: number, file: File}[],
     services: {index: number, file: File}[]
   }>({banners: [], services: []});
   const [previews, setPreviews] = useState<{
     hero?: string,
     logo?: string,
+    pwaLogo?: string,
+    favicon?: string,
     banners: string[],
     services: string[]
   }>({banners: [], services: []});
@@ -157,6 +175,11 @@ export default function AdminDashboard() {
     if (res.success) setFeaturedProducts(res.data || []);
   }
 
+  async function fetchAnnouncements() {
+    const res = await getAnnouncementsAction();
+    if (res.success) setAnnouncements(res.data || []);
+  }
+
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -173,7 +196,8 @@ export default function AdminDashboard() {
       fetchSettings(),
       fetchBlogPosts(),
       fetchBlogCategories(),
-      fetchFeatured()
+      fetchFeatured(),
+      fetchAnnouncements()
     ]).finally(() => {
       setLoading(false);
     });
@@ -421,7 +445,7 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleCmsFileUpload = (type: 'hero' | 'logo' | 'banner' | 'service', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+  const handleCmsFileUpload = (type: 'hero' | 'logo' | 'pwaLogo' | 'favicon' | 'banner' | 'service', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -433,6 +457,12 @@ export default function AdminDashboard() {
       } else if (type === 'logo') {
         setCmsFiles(prev => ({ ...prev, logo: file }));
         setPreviews(prev => ({ ...prev, logo: reader.result as string }));
+      } else if (type === 'pwaLogo') {
+        setCmsFiles(prev => ({ ...prev, pwaLogo: file }));
+        setPreviews(prev => ({ ...prev, pwaLogo: reader.result as string }));
+      } else if (type === 'favicon') {
+        setCmsFiles(prev => ({ ...prev, favicon: file }));
+        setPreviews(prev => ({ ...prev, favicon: reader.result as string }));
       } else if (type === 'banner' && index !== undefined) {
         setCmsFiles(prev => {
           const newBanners = prev.banners.filter(b => b.index !== index);
@@ -464,6 +494,8 @@ export default function AdminDashboard() {
     const res = await updateSiteSettings(siteSettings, {
       heroImage: cmsFiles.heroImage,
       logo: cmsFiles.logo,
+      pwaLogo: cmsFiles.pwaLogo,
+      favicon: cmsFiles.favicon,
       banners: cmsFiles.banners,
       services: cmsFiles.services
     });
@@ -510,6 +542,71 @@ export default function AdminDashboard() {
         setNotification({ message: 'خطا در حذف محصول', type: 'error' });
     }
     setIsSubmitting(false);
+  };
+
+  const handleAnnouncementSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+
+    // Convert checkbox to string 'true'/'false' for Server Action
+    formData.set('isActive', (formData.get('isActive') === 'on').toString());
+    formData.set('dismissible', (formData.get('dismissible') === 'on').toString());
+
+    if (!announcementImagePreview) {
+      formData.append('removeImage', 'true');
+    }
+
+    if (editingAnnouncement) {
+      formData.append('existingImageUrl', editingAnnouncement.imageUrl || '');
+      const res = await updateAnnouncementAction(editingAnnouncement.id, formData);
+      if (res.success) {
+        setNotification({ message: 'اعلان با موفقیت بروزرسانی شد', type: 'success' });
+        setIsAddingAnnouncement(false);
+        setEditingAnnouncement(null);
+        setAnnouncementImagePreview(null);
+        fetchAnnouncements();
+      } else {
+        setNotification({ message: res.error || 'خطا در بروزرسانی اعلان', type: 'error' });
+      }
+    } else {
+      const res = await createAnnouncementAction(formData);
+      if (res.success) {
+        setNotification({ message: 'اعلان جدید با موفقیت ایجاد شد', type: 'success' });
+        setIsAddingAnnouncement(false);
+        setAnnouncementImagePreview(null);
+        fetchAnnouncements();
+      } else {
+        setNotification({ message: res.error || 'خطا در ایجاد اعلان', type: 'error' });
+      }
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setAnnouncementImagePreview(announcement.imageUrl || null);
+    setIsAddingAnnouncement(true);
+    setActiveTab('announcements');
+  };
+
+  const handleDeleteAnnouncement = async (id: string, imageUrl?: string) => {
+    if (!confirm('آیا از حذف این اعلان مطمئن هستید؟')) return;
+    const res = await deleteAnnouncementAction(id, imageUrl);
+    if (res.success) {
+      setNotification({ message: 'اعلان حذف شد', type: 'success' });
+      fetchAnnouncements();
+    } else {
+      setNotification({ message: res.error || 'خطا در حذف اعلان', type: 'error' });
+    }
+  };
+
+  const handleToggleAnnouncement = async (id: string, isActive: boolean) => {
+    const res = await toggleAnnouncementAction(id, isActive);
+    if (res.success) {
+      setNotification({ message: `اعلان ${isActive ? 'فعال' : 'غیرفعال'} شد`, type: 'success' });
+      fetchAnnouncements();
+    }
   };
 
   // Blog Handlers
@@ -593,6 +690,8 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'پیشخوان', icon: '📊' },
     { id: 'products', label: 'محصولات', icon: '💻' },
     { id: 'cms', label: 'مدیریت محتوا (CMS)', icon: '📝' },
+    { id: 'ledger', label: 'دفترچه حساب', icon: '📒' },
+    { id: 'announcements', label: 'اعلان‌ها', icon: '🔔' },
     { id: 'magazine', label: 'مجله و مقالات', icon: '📰' },
     { id: 'management', label: 'مدیریت ساختار', icon: '⚙️' },
   ];
@@ -611,7 +710,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-all text-right font-vazir relative overflow-x-hidden" dir="rtl">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex transition-all text-right font-vazir relative overflow-x-hidden" dir="rtl">
 
       {notification && (
         <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl shadow-2xl animate-bounce-in flex items-center gap-4 border ${
@@ -632,7 +731,7 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 right-0 z-50 w-72 bg-white dark:bg-slate-900 border-l border-slate-100 dark:border-slate-800
-        transition-transform duration-500 transform lg:static lg:translate-x-0
+        transition-transform duration-500 transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
         flex flex-col shadow-2xl lg:shadow-sm
       `}>
@@ -643,7 +742,7 @@ export default function AdminDashboard() {
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-2xl">✕</button>
         </div>
-        <nav className="flex-1 p-6 space-y-2">
+        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
           {tabs.map((item) => (
             <button
               key={item.id}
@@ -1077,9 +1176,9 @@ export default function AdminDashboard() {
                       <span className="text-2xl">🌐</span>
                       <h4 className="text-xl font-black text-slate-900 dark:text-white">تنظیمات عمومی و سئو</h4>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="lg:col-span-4 space-y-4">
-                          <label className="text-xs font-black text-slate-400 mr-2">لوگوی سایت</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="space-y-4">
+                          <label className="text-xs font-black text-slate-400 mr-2">لوگوی اصلی سایت</label>
                           <div onClick={() => document.getElementById('logo-up')?.click()} className="h-24 w-24 rounded-2xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
                             <input type="file" id="logo-up" className="hidden" accept="image/*" onChange={(e) => handleCmsFileUpload('logo', e)} />
                             {previews.logo || siteSettings.general.logo ? (
@@ -1095,7 +1194,46 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         </div>
-                        <div className="lg:col-span-8 space-y-2">
+
+                        <div className="space-y-4">
+                          <label className="text-xs font-black text-slate-400 mr-2">لوگوی PWA (512x512)</label>
+                          <div onClick={() => document.getElementById('pwa-logo-up')?.click()} className="h-24 w-24 rounded-2xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                            <input type="file" id="pwa-logo-up" className="hidden" accept="image/png" onChange={(e) => handleCmsFileUpload('pwaLogo', e)} />
+                            {previews.pwaLogo || siteSettings.general.pwaLogo ? (
+                              <Image
+                                src={previews.pwaLogo || getPublicImageUrl(siteSettings.general.pwaLogo)}
+                                alt=""
+                                fill
+                                className="object-contain p-2"
+                                sizes="96px"
+                              />
+                            ) : (
+                              <span className="text-2xl">📱</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-slate-400 leading-relaxed">تصویر مخصوص اپلیکیشن باید دقیقاً ۵۱۲×۵۱۲ پیکسل و PNG باشد.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                          <label className="text-xs font-black text-slate-400 mr-2">فاوآیکون (Favicon)</label>
+                          <div onClick={() => document.getElementById('favicon-up')?.click()} className="h-24 w-24 rounded-2xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                            <input type="file" id="favicon-up" className="hidden" accept="image/png,image/x-icon" onChange={(e) => handleCmsFileUpload('favicon', e)} />
+                            {previews.favicon || siteSettings.general.favicon ? (
+                              <Image
+                                src={previews.favicon || getPublicImageUrl(siteSettings.general.favicon)}
+                                alt=""
+                                fill
+                                className="object-contain p-2"
+                                sizes="96px"
+                              />
+                            ) : (
+                              <span className="text-2xl">🌍</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-slate-400 leading-relaxed">آیکون مرورگر (۳۲×۳۲ یا ۱۶×۱۶) با فرمت .ico یا .png</p>
+                        </div>
+
+                        <div className="md:col-span-2 lg:col-span-3 space-y-2">
                           <label className="text-xs font-black text-slate-400 mr-2">نام سایت (نمایش در برندینگ)</label>
                         <input value={siteSettings.general.siteName} onChange={e => handleCmsChange('general', 'siteName', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                         <p className="text-[10px] text-slate-400 mr-2">مثال: آسو شنو</p>
@@ -1770,6 +1908,222 @@ export default function AdminDashboard() {
             )}
 
             {/* MANAGEMENT TAB */}
+            {/* LEDGER TAB */}
+            {activeTab === 'ledger' && (
+              <LedgerManager />
+            )}
+
+            {/* ANNOUNCEMENTS TAB */}
+            {activeTab === 'announcements' && (
+              <div className="space-y-10 animate-fade-in">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-estedad text-slate-900 dark:text-white">مدیریت اعلان‌ها</h3>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">بنرها و پیام‌های اطلاع‌رسانی سایت را از اینجا مدیریت کنید.</p>
+                  </div>
+                  {!isAddingAnnouncement && (
+                    <button onClick={() => { setIsAddingAnnouncement(true); setEditingAnnouncement(null); setAnnouncementImagePreview(null); }} className="w-full sm:w-auto h-14 sm:h-16 px-10 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl hover:scale-105 transition-all">
+                      + افزودن اعلان جدید
+                    </button>
+                  )}
+                </div>
+
+                {!isAddingAnnouncement ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {announcements.map(ann => (
+                      <div key={ann.id} className={`p-6 rounded-[2.5rem] bg-white dark:bg-slate-900 border ${ann.isActive ? 'border-indigo-500 shadow-lg' : 'border-slate-100 dark:border-slate-800'} relative flex flex-col gap-4`}>
+                        <div className="flex justify-between items-start">
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+                            ann.displayMode === 'LARGE' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'
+                          }`}>
+                            {ann.displayMode === 'LARGE' ? 'نمایش بزرگ (مدال)' : 'نمایش کوچک (بنر)'}
+                          </span>
+                          <button
+                            onClick={() => handleToggleAnnouncement(ann.id, !ann.isActive)}
+                            className={`text-[10px] font-black px-3 py-1 rounded-full transition-colors ${
+                              ann.isActive ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {ann.isActive ? 'فعال' : 'غیرفعال'}
+                          </button>
+                        </div>
+
+                        <div className="aspect-video rounded-2xl bg-slate-50 dark:bg-slate-950 overflow-hidden relative border border-slate-100 dark:border-slate-800">
+                          {ann.imageUrl ? (
+                            <Image src={getPublicImageUrl(ann.imageUrl)} alt="" fill className="object-cover" sizes="300px" />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-slate-300 text-2xl">📢</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="font-black text-slate-900 dark:text-white line-clamp-1">{ann.title}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{ann.message}</p>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-auto pt-4 border-t border-slate-50 dark:border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400">اولویت: {ann.priority}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleEditAnnouncement(ann)} className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center hover:bg-indigo-50 transition-colors text-lg">✏️</button>
+                            <button onClick={() => handleDeleteAnnouncement(ann.id, ann.imageUrl)} className="h-10 w-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors text-lg">🗑️</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {announcements.length === 0 && (
+                      <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] text-slate-400 italic">
+                        هیچ اعلانی ثبت نشده است.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 sm:p-12 shadow-xl animate-fade-in">
+                    <form onSubmit={handleAnnouncementSubmit} className="space-y-10">
+                      <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-800 pb-8">
+                         <h4 className="text-2xl font-black text-slate-900 dark:text-white">{editingAnnouncement ? 'ویرایش اعلان' : 'ایجاد اعلان جدید'}</h4>
+                         <button type="button" onClick={() => { setIsAddingAnnouncement(false); setEditingAnnouncement(null); }} className="h-12 px-8 rounded-2xl bg-slate-50 text-slate-500 font-black text-xs">انصراف</button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                        <div className="lg:col-span-8 space-y-8">
+                          <div className="space-y-2">
+                            <label className="text-xs font-black text-slate-400 mr-2">عنوان اعلان</label>
+                            <input name="title" required defaultValue={editingAnnouncement?.title} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black text-base border-2 border-transparent focus:border-indigo-600 outline-none" placeholder="عنوان پیام..." />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-black text-slate-400 mr-2">متن اصلی پیام</label>
+                            <textarea name="message" required rows={5} defaultValue={editingAnnouncement?.message} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none resize-none" placeholder="متن کامل اطلاع‌رسانی..."></textarea>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">متن دکمه (CTA)</label>
+                              <input name="ctaText" defaultValue={editingAnnouncement?.ctaText} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" placeholder="مثلاً: مشاهده محصول" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">لینک دکمه (URL)</label>
+                              <input name="ctaUrl" defaultValue={editingAnnouncement?.ctaUrl} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" dir="ltr" placeholder="https://..." />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <label className="text-xs font-black text-slate-400 mr-2">تاریخ شروع (اختیاری)</label>
+                                <button type="button" onClick={() => {
+                                  const now = new Date();
+                                  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                                  const input = document.querySelector('input[name="startAt"]') as HTMLInputElement;
+                                  if (input) input.value = now.toISOString().slice(0, 16);
+                                }} className="text-[9px] font-black text-indigo-600">همین حالا</button>
+                              </div>
+                              <input type="datetime-local" name="startAt" defaultValue={editingAnnouncement?.startAt ? new Date(editingAnnouncement.startAt).toISOString().slice(0, 16) : ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" />
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <label className="text-xs font-black text-slate-400 mr-2">تاریخ انقضا (اختیاری)</label>
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => {
+                                    const date = new Date();
+                                    date.setDate(date.getDate() + 1);
+                                    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                                    const input = document.querySelector('input[name="endAt"]') as HTMLInputElement;
+                                    if (input) input.value = date.toISOString().slice(0, 16);
+                                  }} className="text-[9px] font-black text-indigo-600">۱ روز</button>
+                                  <button type="button" onClick={() => {
+                                    const date = new Date();
+                                    date.setDate(date.getDate() + 7);
+                                    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                                    const input = document.querySelector('input[name="endAt"]') as HTMLInputElement;
+                                    if (input) input.value = date.toISOString().slice(0, 16);
+                                  }} className="text-[9px] font-black text-indigo-600">۱ هفته</button>
+                                  <button type="button" onClick={() => {
+                                    const input = document.querySelector('input[name="endAt"]') as HTMLInputElement;
+                                    if (input) input.value = '';
+                                  }} className="text-[9px] font-black text-red-500">بدون انقضا</button>
+                                </div>
+                              </div>
+                              <input type="datetime-local" name="endAt" defaultValue={editingAnnouncement?.endAt ? new Date(editingAnnouncement.endAt).toISOString().slice(0, 16) : ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-4 space-y-8">
+                          <div className="space-y-4">
+                            <label className="text-xs font-black text-slate-400 mr-2">تصویر اعلان</label>
+                            <div onClick={() => document.getElementById('ann-img-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                              <input type="file" id="ann-img-up" name="image" className="hidden" accept="image/*" onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setAnnouncementImagePreview(reader.result as string);
+                                  reader.readAsDataURL(file);
+                                }
+                              }} />
+                              {announcementImagePreview ? (
+                                <Image src={announcementImagePreview} alt="" fill className="object-cover" />
+                              ) : (
+                                <span className="text-4xl">📸</span>
+                              )}
+                            </div>
+                            {announcementImagePreview && (
+                              <button type="button" onClick={() => setAnnouncementImagePreview(null)} className="w-full text-[10px] font-black text-red-500 text-center">حذف تصویر</button>
+                            )}
+                          </div>
+
+                          <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl space-y-6">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">نوع نمایش</label>
+                              <select name="displayMode" defaultValue={editingAnnouncement?.displayMode || 'SMALL'} className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-bold text-xs border border-slate-200 dark:border-slate-700 outline-none">
+                                <option value="SMALL">نوار اطلاع‌رسانی (Small)</option>
+                                <option value="LARGE">کارت/مدال بزرگ (Large)</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">نوع پیام (رنگ‌بندی)</label>
+                              <select name="type" defaultValue={editingAnnouncement?.type || 'INFO'} className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-bold text-xs border border-slate-200 dark:border-slate-700 outline-none">
+                                <option value="INFO">اطلاعیه (آبی)</option>
+                                <option value="SUCCESS">موفقیت/تخفیف (سبز)</option>
+                                <option value="WARNING">هشدار (زرد)</option>
+                                <option value="DANGER">مهم/فوری (قرمز)</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">اولویت نمایش (بزرگتر = بالاتر)</label>
+                              <input type="number" name="priority" defaultValue={editingAnnouncement?.priority || 0} className="w-full h-12 bg-white dark:bg-slate-900 rounded-xl px-4 font-bold text-xs border border-slate-200 dark:border-slate-700 outline-none" />
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                              <label className="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" name="isActive" defaultChecked={editingAnnouncement ? editingAnnouncement.isActive : true} className="w-5 h-5 rounded-lg border-2 border-slate-300 checked:bg-indigo-600 transition-all" />
+                                <span className="text-xs font-black text-slate-700 dark:text-slate-300 group-hover:text-indigo-600">فعال باشد</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" name="dismissible" defaultChecked={editingAnnouncement ? editingAnnouncement.dismissible : true} className="w-5 h-5 rounded-lg border-2 border-slate-300 checked:bg-indigo-600 transition-all" />
+                                <span className="text-xs font-black text-slate-700 dark:text-slate-300 group-hover:text-indigo-600">قابل بستن توسط کاربر</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col-reverse sm:flex-row justify-end gap-4 pt-10 border-t border-slate-50 dark:border-slate-800">
+                        <button type="button" onClick={() => { setIsAddingAnnouncement(false); setEditingAnnouncement(null); }} className="h-14 px-12 rounded-2xl font-black text-slate-400">انصراف</button>
+                        <button type="submit" disabled={isSubmitting} className="h-14 px-16 rounded-2xl bg-indigo-600 text-white font-black text-base shadow-xl disabled:bg-slate-300">
+                           {isSubmitting ? 'در حال ثبت...' : (editingAnnouncement ? 'بروزرسانی نهایی' : 'انتشار اعلان')}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'management' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10">
                  {/* Categories */}

@@ -144,6 +144,16 @@
     @apply bg-linear-to-r from-primary to-cyan-500 bg-clip-text text-transparent;
   }
 
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 dark:bg-slate-800 rounded-full;
+  }
+
   /* Basic Prose Styles */
   .prose {
     @apply text-muted-foreground leading-loose;
@@ -176,10 +186,28 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .animate-bounce-in {
   animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-zoom-in {
+  animation: zoom-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

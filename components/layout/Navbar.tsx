@@ -40,7 +40,7 @@ const Navbar = ({ settings, session }: { settings: SiteSettings, session: any })
 
   return (
     <>
-      <nav className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+      <nav className={`sticky top-0 z-50 w-full transition-all duration-500 ${
         scrolled ? 'h-16 glass-effect shadow-md' : 'h-24 bg-transparent border-transparent'
       }`}>
         <div className="container mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -72,27 +72,31 @@ const Navbar = ({ settings, session }: { settings: SiteSettings, session: any })
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsSearchOpen(true)} className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">🔍</button>
-            <ThemeToggle />
-            <button onClick={() => setIsCartOpen(true)} className="relative h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">🔍</button>
+            <div className="hidden sm:block"><ThemeToggle /></div>
+            <button onClick={() => setIsCartOpen(true)} className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">
               🛒 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center border-2 border-background">{totalCount}</span>
             </button>
+
             <div className="hidden md:block h-6 w-px bg-border mx-1"></div>
 
             {isLoggedIn ? (
               <Link
                 href={isAdmin ? "/admin" : "/profile"}
-                className="hidden md:flex h-10 items-center px-6 rounded-xl bg-secondary text-foreground text-xs font-black border border-border hover:bg-muted transition-all gap-2"
+                className="flex h-9 sm:h-10 items-center px-3 sm:px-6 rounded-xl bg-secondary text-foreground text-[10px] sm:text-xs font-black border border-border hover:bg-muted transition-all gap-2"
               >
-                <span>{isAdmin ? 'پنل مدیریت' : 'حساب کاربری'}</span>
-                <span className="text-lg">👤</span>
+                <span className="hidden md:inline">{isAdmin ? 'پنل مدیریت' : 'حساب کاربری'}</span>
+                <span className="text-lg sm:text-base">👤</span>
               </Link>
             ) : (
-              <Link href="/login" className="hidden md:flex h-10 items-center px-6 rounded-xl bg-foreground text-background text-xs font-black hover:scale-105 transition-all">ورود</Link>
+              <div className="flex items-center gap-2">
+                <Link href="/login" className="flex h-9 sm:h-10 items-center px-3 sm:px-6 rounded-xl bg-muted/50 text-foreground text-[10px] sm:text-xs font-black hover:bg-muted transition-all">ورود</Link>
+                <Link href="/signup" className="hidden md:flex h-10 items-center px-6 rounded-xl bg-foreground text-background text-xs font-black hover:scale-105 transition-all">ثبت‌نام</Link>
+              </div>
             )}
 
-            <Link href="/repair" className="inline-flex h-10 items-center px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">ثبت تعمیر</Link>
+            <Link href="/repair" className="hidden sm:inline-flex h-9 sm:h-10 items-center px-4 sm:px-6 rounded-xl bg-primary text-primary-foreground text-[10px] sm:text-xs font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">ثبت تعمیر</Link>
           </div>
         </div>
       </nav>
