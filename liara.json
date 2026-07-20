@@ -2,10 +2,11 @@
   "app": "asoshno",
   "platform": "next",
   "port": 3000,
+  "node": {
+    "version": "22",
+    "mirror": false
+  },
   "build": {
     "location": "iran"
-  },
-  "scripts": {
-    "build": "npx prisma generate && next build"
   }
 }

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     // غیرفعال کردن بهینه‌سازی خودکار تصاویر برای حل قطعی مشکل ۴۰۰ و ۵۰۰ در لیارا
     // این کار باعث می‌شود تصاویر مستقیماً از آدرس استوریج بارگذاری شوند
