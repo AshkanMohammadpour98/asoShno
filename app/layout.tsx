@@ -9,9 +9,13 @@ import { getLocalSettings, getLocalCategories } from "@/lib/db";
 import { getPublicImageUrl } from "@/lib/upload-image";
 import { auth } from "@/lib/auth";
 import { CartProvider } from "@/components/providers/CartProvider";
+import { WishlistProvider } from "@/components/providers/WishlistProvider";
+import { SessionProvider } from "@/components/providers/SessionProvider";
+import { getWishlistIds } from "@/lib/actions/wishlist";
 import ConnectivityGuard from "@/components/layout/ConnectivityGuard";
 import PWARegister from "@/components/layout/PWARegister";
 import InstallPrompt from "@/components/layout/InstallPrompt";
+import FloatingChatButton from "@/components/layout/FloatingChatButton";
 
 const vazir = localFont({
   src: "../public/fonts/Vazirmatn/Vazirmatn[wght].woff2",
@@ -39,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // آدرس پایه سایت را از متغیر محیطی می‌خوانیم.
   // حذف کوتیشن‌های احتمالی برای جلوگیری از خطای ERR_INVALID_URL در محیط‌هایی مثل لیارا
   const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const baseUrl = rawBaseUrl.replace(/['"]/g, '');
+  const baseUrl = rawBaseUrl.replace(/['"]/g, '').replace(/\/$/, '');
 
   return {
     title: {
@@ -50,10 +54,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: settings.general.siteKeywords?.split(",").map(k => k.trim()) || [],
     authors: [{ name: settings.general.siteName }],
     metadataBase: new URL(baseUrl),
-    manifest: '/manifest.ts',
+    manifest: '/manifest.webmanifest',
     icons: {
-      icon: settings.general.favicon ? getPublicImageUrl(settings.general.favicon) : "/favicon.ico",
-      apple: settings.general.pwaLogo ? getPublicImageUrl(settings.general.pwaLogo) : "/logo/logo.png",
+      icon: settings.general.favicon ? getPublicImageUrl(settings.general.favicon) : [
+        { url: '/favicon/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/favicon/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: settings.general.favicon ? getPublicImageUrl(settings.general.favicon) : '/favicon/favicon.ico',
+      apple: settings.general.pwaLogo ? getPublicImageUrl(settings.general.pwaLogo) : '/favicon/apple-touch-icon.png',
     },
     appleWebApp: {
       capable: true,
@@ -83,6 +91,7 @@ export default async function RootLayout({
   const settings = await getLocalSettings();
   const categories = await getLocalCategories();
   const session = await auth();
+  const initialWishlist = await getWishlistIds();
 
   return (
     <html
@@ -92,16 +101,22 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-vazir bg-background text-foreground transition-colors duration-300">
+        {/* ... (scripts) ... */}
         <PWARegister />
         <InstallPrompt />
         <ConnectivityGuard />
         <AnnouncementDisplay />
-        <CartProvider>
-          <Navbar settings={settings} session={session} />
-          <main className="flex-1">{children}</main>
-          <Footer settings={settings} categories={categories} />
-          <BottomNavigation session={session} />
-        </CartProvider>
+        <SessionProvider>
+          <WishlistProvider initialWishlist={initialWishlist}>
+            <CartProvider>
+              <Navbar settings={settings} session={session} />
+              <main className="flex-1">{children}</main>
+              <FloatingChatButton />
+              <Footer settings={settings} categories={categories} />
+              <BottomNavigation session={session} />
+            </CartProvider>
+          </WishlistProvider>
+        </SessionProvider>
       </body>
     </html>
   );

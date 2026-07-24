@@ -213,7 +213,7 @@ export default function UserDashboard() {
                       <div className="bg-white dark:bg-slate-950 p-8 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800 shadow-sm relative">
                          <div className="absolute -top-3 right-8 bg-indigo-600 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest">گزارش فنی</div>
                          <p className="text-sm font-bold text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                            "سلام اشکان عزیز، قطعه باتری اورجینال از انبار دبی تامین شد و بر روی دستگاه شما نصب گردید. در حال حاضر دستگاه زیر تست استرس و پایداری قرار دارد تا از سلامت کامل آن اطمینان حاصل شود."
+                            &quot;سلام اشکان عزیز، قطعه باتری اورجینال از انبار دبی تامین شد و بر روی دستگاه شما نصب گردید. در حال حاضر دستگاه زیر تست استرس و پایداری قرار دارد تا از سلامت کامل آن اطمینان حاصل شود.&quot;
                          </p>
                       </div>
                     </div>

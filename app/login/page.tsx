@@ -11,19 +11,19 @@ export default function LoginPage() {
   const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center py-20 px-4 bg-secondary">
+    <div className="relative min-h-screen flex items-center justify-center py-12 lg:py-20 px-4 bg-secondary">
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
 
       <div className="w-full max-w-md animate-fade-in text-right">
-        <div className="bg-card border border-border rounded-[3rem] p-10 lg:p-14 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] relative overflow-hidden group transition-colors duration-300">
-          <div className="absolute top-0 left-0 w-full h-2 bg-primary"></div>
+        <div className="bg-card border border-border rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-14 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] relative overflow-hidden group transition-colors duration-300">
+          <div className="absolute top-0 left-0 w-full h-1.5 lg:h-2 bg-primary"></div>
 
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-black text-foreground mb-3">خوش آمدید</h1>
-            <p className="text-muted-foreground text-sm font-medium">به حساب کاربری خود وارد شوید</p>
+          <div className="text-center mb-8 lg:mb-12">
+            <h1 className="text-3xl lg:text-4xl font-black text-foreground mb-3">خوش آمدید</h1>
+            <p className="text-muted-foreground text-xs lg:text-sm font-medium">به حساب کاربری خود وارد شوید</p>
           </div>
 
-          <form action={dispatch} className="space-y-8">
+          <form action={dispatch} className="space-y-6 lg:space-y-8">
             <input type="hidden" name="callbackUrl" value={callbackUrl} />
             <div>
               <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-3 mr-4">شماره همراه</label>
@@ -31,7 +31,7 @@ export default function LoginPage() {
                 type="tel"
                 name="phone"
                 placeholder="09123456789"
-                className="w-full h-16 bg-muted border-2 border-transparent focus:border-primary focus:bg-card rounded-[1.5rem] px-8 text-sm font-black text-foreground transition-all outline-none text-left dir-ltr"
+                className="w-full h-14 lg:h-16 bg-muted border border-border/50 focus:border-primary focus:bg-card rounded-[1.25rem] lg:rounded-[1.5rem] px-6 lg:px-8 text-sm font-black text-foreground transition-all outline-none text-left dir-ltr shadow-inner"
                 required
                 disabled={isPending}
               />
@@ -44,7 +44,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="••••••••"
-                  className="w-full h-16 bg-muted border-2 border-transparent focus:border-primary focus:bg-card rounded-[1.5rem] px-8 pl-16 text-sm font-black text-foreground transition-all outline-none"
+                  className="w-full h-14 lg:h-16 bg-muted border border-border/50 focus:border-primary focus:bg-card rounded-[1.25rem] lg:rounded-[1.5rem] px-6 lg:px-8 pl-14 lg:pl-16 text-sm font-black text-foreground transition-all outline-none shadow-inner"
                   required
                   disabled={isPending}
                 />
@@ -63,14 +63,19 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full h-18 rounded-[1.5rem] bg-primary text-primary-foreground font-black text-lg shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-16 lg:h-18 rounded-[1.25rem] lg:rounded-[1.5rem] bg-primary text-primary-foreground font-black text-lg shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending ? 'در حال ورود...' : 'ورود به حساب'}
             </button>
           </form>
 
-          <div className="mt-10 pt-10 border-t border-border text-center space-y-4">
-            <p className="text-sm font-bold text-muted-foreground">حساب کاربری ندارید؟ <Link href="/signup" className="text-primary hover:underline">ثبت‌نام</Link></p>
+          <div className="mt-8 pt-8 lg:mt-10 lg:pt-10 border-t border-border text-center space-y-4">
+            <p className="text-sm font-bold text-muted-foreground">
+              حساب کاربری ندارید؟{' '}
+              <Link href={`/signup${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`} className="text-primary hover:underline">
+                ثبت‌نام
+              </Link>
+            </p>
             <Link href="/" className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors block">خانه</Link>
           </div>
         </div>

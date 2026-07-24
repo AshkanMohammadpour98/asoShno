@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SafeImage from '@/components/common/SafeImage';
 import ProductSkeleton from '@/components/shop/ProductSkeleton';
+import WishlistButton from '@/components/shop/WishlistButton';
 import { getProducts, getCategories, getBrands } from '@/lib/actions/products';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -66,11 +67,11 @@ export default function ShopPage() {
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
-      <div className="container mx-auto px-4 pt-32 pb-12 lg:pt-44 lg:pb-20 text-right" dir="rtl">
+      <div className="container mx-auto px-4 pt-28 pb-12 lg:pt-36 lg:pb-20 text-right" dir="rtl">
         {/* Page Header */}
-        <div className="mb-16">
-          <h1 className="text-4xl lg:text-7xl font-extrabold mb-6 text-foreground tracking-tight">ویترین محصولات</h1>
-          <p className="text-muted-foreground text-lg max-w-2xl font-medium">تکنولوژی روز اروپا و آمریکا، مستقیماً از بازارهای دبی تا شهرستان اشنویه.</p>
+        <div className="mb-10 lg:mb-16">
+          <h1 className="text-4xl lg:text-7xl font-extrabold mb-4 lg:mb-6 text-foreground tracking-tight">ویترین محصولات</h1>
+          <p className="text-muted-foreground text-base lg:text-lg max-w-2xl font-medium">تکنولوژی روز اروپا و آمریکا، مستقیماً از بازارهای دبی تا شهرستان اشنویه.</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
@@ -86,8 +87,8 @@ export default function ShopPage() {
 
           {/* Sidebar Filters */}
           <aside className={`${showMobileFilters ? 'block' : 'hidden'} lg:block w-full lg:w-72 space-y-6 lg:sticky lg:top-24 h-fit animate-fade-in`}>
-            <div className="bg-card border border-border rounded-[2.5rem] p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
+            <div className="bg-card border border-border rounded-[2rem] lg:rounded-[2.5rem] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6 lg:mb-8">
                  <h3 className="text-lg font-bold tracking-tight text-foreground">فیلترهای دقیق</h3>
                  <button
                   onClick={clearFilters}
@@ -177,6 +178,10 @@ export default function ShopPage() {
                 products.map((product) => (
                   <Link href={`/shop/product/${product.id}`} key={product.id} className="bento-card group p-5 border-border bg-card flex flex-col hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500">
                     <div className="aspect-[4/3] rounded-[2rem] bg-muted/50 mb-6 flex items-center justify-center relative overflow-hidden border border-transparent group-hover:border-primary/20 transition-all duration-700">
+                        <WishlistButton
+                          productId={product.id}
+                          className="absolute top-5 left-5 z-20 w-10 h-10"
+                        />
                         <SafeImage
                           src={product.images?.[0] || '/logo/logo.png'}
                           alt={product.name}

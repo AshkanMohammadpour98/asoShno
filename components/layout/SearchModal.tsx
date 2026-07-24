@@ -6,6 +6,7 @@ import { getProducts } from '@/lib/actions/products';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { formatPrice } from '@/lib/utils';
 import type { LocalProduct } from '@/lib/types';
+import { FiSearch } from 'react-icons/fi';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -82,7 +83,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
           <div className="flex items-center gap-3 sm:gap-6">
-            <span className="text-2xl sm:text-3xl opacity-40">🔍</span>
+            <span className="text-2xl sm:text-3xl opacity-40 text-foreground">
+              <FiSearch />
+            </span>
             <input
               ref={inputRef}
               type="text"

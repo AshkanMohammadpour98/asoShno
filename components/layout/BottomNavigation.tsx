@@ -2,6 +2,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import UnreadBadge from './UnreadBadge';
+import ThemeToggle from './ThemeToggle';
+import { FiSun, FiMoon } from 'react-icons/fi';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: string;
+  hasBadge: boolean;
+}
 
 const BottomNavigation = ({ session }: { session: any }) => {
   const pathname = usePathname();
@@ -13,19 +23,22 @@ const BottomNavigation = ({ session }: { session: any }) => {
 
   if (pathname?.startsWith('/admin')) return null;
 
-  const navItems = [
-    { name: 'خانه', href: '/', icon: '🏠' },
-    { name: 'فروشگاه', href: '/shop', icon: '🛒' },
-    { name: 'تعمیرات', href: '/repair', icon: '🔧' },
+  const navItems: NavItem[] = [
+    { name: 'خانه', href: '/', icon: '🏠', hasBadge: false },
+    { name: 'فروشگاه', href: '/shop', icon: '🛒', hasBadge: false },
+    { name: 'تعمیرات', href: '/repair', icon: '🔧', hasBadge: false },
     {
       name: isLoggedIn ? (isAdmin ? 'پنل' : 'حساب') : 'ورود',
       href: isLoggedIn ? (isAdmin ? '/admin' : '/profile') : '/login',
-      icon: '👤'
+      icon: '👤',
+      hasBadge: false
     },
-    { name: 'بیشتر', href: '#menu', icon: '✨' },
+    { name: 'بیشتر', href: '#menu', icon: '✨', hasBadge: false },
   ];
 
   const moreLinks = [
+    ...(isLoggedIn ? [{ name: 'ثبت تعمیرات', href: '/repair', icon: '🔧' }] : []),
+    { name: 'علاقه‌مندی‌ها', href: '/profile/wishlist', icon: '❤️' },
     { name: 'رهگیری سفارش', href: '/track', icon: '📦' },
     { name: 'مجله آسو', href: '/blog', icon: '📖' },
     { name: 'درباره ما', href: '/about', icon: '🏢' },
@@ -34,7 +47,6 @@ const BottomNavigation = ({ session }: { session: any }) => {
 
   return (
     <>
-      {/* More Menu Backdrop */}
       {isMoreOpen && (
         <div
           className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden animate-fade-in"
@@ -87,6 +99,18 @@ const BottomNavigation = ({ session }: { session: any }) => {
            </div>
 
            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 mr-2">منوی اصلی آسو شنو</h4>
+
+           <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/30 mb-2 group">
+              <div className="flex items-center gap-4">
+                <span className="text-xl text-foreground">
+                  <div className="flex dark:hidden"><FiMoon /></div>
+                  <div className="hidden dark:flex"><FiSun /></div>
+                </span>
+                <span className="font-bold text-sm text-foreground">حالت تیره / روشن</span>
+              </div>
+              <ThemeToggle />
+           </div>
+
            {moreLinks.map((link) => (
              <Link
                key={link.href}
@@ -113,7 +137,14 @@ const BottomNavigation = ({ session }: { session: any }) => {
                 <div className={`flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                   (isActive || (isMore && isMoreOpen)) ? 'text-primary scale-110' : 'text-muted-foreground'
                 }`}>
-                  <span className="text-xl">{item.icon}</span>
+                  <div className="relative">
+                    <span className="text-xl">{item.icon}</span>
+                    {item.hasBadge && (
+                       <div className="absolute -top-1 -right-1">
+                          <UnreadBadge />
+                       </div>
+                    )}
+                  </div>
                   <span className="text-[10px] font-black uppercase tracking-tight">{item.name}</span>
                 </div>
               );

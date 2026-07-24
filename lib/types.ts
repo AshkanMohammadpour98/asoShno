@@ -66,7 +66,7 @@ export interface SiteSettings {
     heroSubtitle: string;
     heroButtonText: string;
     heroButtonLink: string;
-    heroImage: string;
+    heroLayout?: 'side-by-side' | 'stacked';
     banners: {
       title: string;
       link: string;
@@ -148,6 +148,22 @@ export interface Announcement {
   priority: number;
   ctaText?: string;
   ctaUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HomeSlide {
+  id: string;
+  title?: string | null;
+  subtitle?: string | null;
+  image: string;
+  mobileImage?: string | null;
+  link?: string | null;
+  ctaText?: string | null;
+  priority: number;
+  isActive: boolean;
+  textColor?: string | null;
+  buttonColor?: string | null;
   createdAt: string;
   updatedAt: string;
 }

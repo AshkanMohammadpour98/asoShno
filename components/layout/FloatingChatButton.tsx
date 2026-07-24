@@ -14,10 +14,13 @@ const FloatingChatButton = () => {
   const hiddenRoutes = ['/admin', '/login', '/signup', '/checkout'];
   if (hiddenRoutes.some(route => pathname?.startsWith(route))) return null;
 
-  const targetHref = session?.user ? '/profile/tickets' : '/login?callbackUrl=/profile/tickets';
+  const targetHref = status === 'authenticated' ? '/profile/tickets' : '/login?callbackUrl=/profile/tickets';
+
+  // Don't show if status is loading and we don't know yet (to avoid flickering)
+  if (status === 'loading') return null;
 
   return (
-    <div className="fixed bottom-6 left-6 z-[60] lg:bottom-10 lg:left-10 animate-fade-in group">
+    <div className="fixed bottom-28 left-6 z-[60] lg:bottom-10 lg:left-10 animate-fade-in group">
       <Link
         href={targetHref}
         className="relative h-14 w-14 lg:h-16 lg:w-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-500/40 hover:scale-110 active:scale-95 transition-all duration-300 ring-4 ring-white/10"

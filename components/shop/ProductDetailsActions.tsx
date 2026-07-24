@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { toggleWishlist, getWishlistStatus } from '@/lib/actions/wishlist';
 import ShareModal from './ShareModal';
+import WishlistButton from './WishlistButton';
 import { useRouter } from 'next/navigation';
 import { LocalProduct } from '@/lib/types';
 
@@ -12,20 +12,17 @@ interface ProductDetailsActionsProps {
 
 export default function ProductDetailsActions({ product }: ProductDetailsActionsProps) {
   const router = useRouter();
-  const [isInWishlist, setIsInWishlist] = useState(false);
-  const [loadingWishlist, setLoadingWishlist] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    async function checkWishlist() {
-      const result = await getWishlistStatus(product.id);
-      if (result.success) {
-        setIsInWishlist(result.isInWishlist);
-      }
-    }
-    checkWishlist();
-  }, [product.id]);
+    const handleWishlistUpdate = () => {
+      // Logic to show a toast or something if needed
+    };
+
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    return () => window.removeEventListener('wishlist-updated', handleWishlistUpdate);
+  }, []);
 
   useEffect(() => {
     if (toast) {
@@ -33,24 +30,6 @@ export default function ProductDetailsActions({ product }: ProductDetailsActions
       return () => clearTimeout(timer);
     }
   }, [toast]);
-
-  const handleWishlist = async () => {
-    setLoadingWishlist(true);
-    const result = await toggleWishlist(product.id);
-    setLoadingWishlist(false);
-
-    if (result.success) {
-      setIsInWishlist(result.action === 'ADDED');
-      setToast({
-        message: result.action === 'ADDED' ? 'به لیست علاقه‌مندی‌ها اضافه شد' : 'از لیست علاقه‌مندی‌ها حذف شد',
-        type: 'success'
-      });
-    } else if (result.error === 'NOT_AUTHENTICATED') {
-      router.push('/login?callbackUrl=' + encodeURIComponent(window.location.pathname));
-    } else {
-      setToast({ message: 'خطایی رخ داد', type: 'error' });
-    }
-  };
 
   const handleCompare = () => {
     router.push(`/compare?ids=${product.id}`);
@@ -60,20 +39,15 @@ export default function ProductDetailsActions({ product }: ProductDetailsActions
 
   return (
     <div className="flex flex-wrap gap-2 lg:gap-3 items-center">
-      <button
-        onClick={handleWishlist}
-        disabled={loadingWishlist}
-        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all font-black text-[10px] uppercase tracking-widest active:scale-95 ${
-          isInWishlist
-          ? 'border-rose-500 bg-rose-50 text-rose-600'
-          : 'border-border bg-background text-foreground hover:border-rose-500/30'
-        }`}
-      >
-        <span className={`${loadingWishlist ? 'animate-pulse' : ''}`}>
-          {isInWishlist ? '❤️' : '🤍'}
+      <div className="flex items-center gap-3 bg-card border border-border px-4 py-2 rounded-2xl">
+        <WishlistButton
+          productId={product.id}
+          className="w-10 h-10 p-2 text-muted-foreground hover:text-red-500"
+        />
+        <span className="text-[10px] font-black text-foreground uppercase tracking-widest border-r border-border pr-3">
+          علاقه‌مندی
         </span>
-        {isInWishlist ? 'علاقه‌مندی' : 'علاقه‌مندی'}
-      </button>
+      </div>
 
       <button
         onClick={handleCompare}

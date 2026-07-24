@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -129,6 +128,47 @@ enum Role {
   CUSTOMER
 }
 
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketType {
+  CONTACT
+  REPAIR
+  ORDER_SUPPORT
+  TECHNICAL
+  OTHER
+}
+
+model HomeSlide {
+  id          String   @id @default(uuid())
+  title       String?
+  subtitle    String?
+  image       String   // Desktop image
+  mobileImage String?  // Mobile image (optional)
+  link        String?
+  ctaText     String?
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true)
+  textColor   String?
+  buttonColor String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([priority])
+  @@index([isActive])
+}
+
 model User {
   id            String     @id @default(uuid())
   firstName     String
@@ -137,8 +177,49 @@ model User {
   password      String
   role          Role       @default(CUSTOMER)
   wishlists     Wishlist[]
+  tickets       Ticket[]
+  messages      Message[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+}
+
+model Ticket {
+  id            String         @id @default(uuid())
+  subject       String
+  type          TicketType     @default(CONTACT)
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages      Message[]
+
+  lastMessageAt DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  isAdmin   Boolean  @default(false)
+  isRead    Boolean  @default(false)
+
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([senderId])
 }
 
 model Announcement {

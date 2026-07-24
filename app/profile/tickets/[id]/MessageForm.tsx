@@ -7,6 +7,7 @@ export default function MessageForm({ ticketId }: { ticketId: string }) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,44 +15,65 @@ export default function MessageForm({ ticketId }: { ticketId: string }) {
 
     setIsSubmitting(true);
     setError('');
+    setSuccess(false);
 
     try {
-      await addMessage(ticketId, content);
-      setContent('');
-    } catch (err: any) {
-      setError(err.message || 'خطایی در ارسال پیام رخ داد.');
+      const res = await addMessage(ticketId, content);
+      if (res.success) {
+        setContent('');
+        setSuccess(true);
+        // Hide success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(res.error || 'خطایی در ارسال پیام رخ داد.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('یک خطای غیرمنتظره رخ داد. لطفاً دوباره تلاش کنید.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="relative group">
+      <div className="relative">
         <textarea
-          rows={5}
+          rows={3}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e as any);
+            }
+          }}
           placeholder="پاسخ خود را اینجا بنویسید..."
-          className="w-full bg-secondary border-2 border-transparent focus:border-primary focus:bg-card rounded-[2rem] px-8 py-8 text-sm font-black text-foreground transition-all outline-none resize-none"
+          className="w-full bg-secondary border-2 border-transparent focus:border-primary focus:bg-card rounded-[1.5rem] lg:rounded-[2rem] px-6 lg:px-8 py-5 lg:py-6 pl-16 lg:pl-20 text-sm font-black text-foreground transition-all outline-none resize-none shadow-inner"
         ></textarea>
-        {error && <p className="text-red-500 text-xs font-bold mr-4">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={isSubmitting || !content.trim()}
+          className="absolute left-3 lg:left-4 bottom-3 lg:bottom-4 h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-110 active:scale-95 transition-all disabled:opacity-40 disabled:grayscale disabled:pointer-events-none group/btn"
+        >
+          {isSubmitting ? (
+            <div className="h-5 w-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <span className="text-xl lg:text-2xl group-hover/btn:rotate-12 transition-transform">⚡</span>
+          )}
+        </button>
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting || !content.trim()}
-        className="w-full h-18 rounded-2xl bg-foreground text-background font-black text-lg shadow-2xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-4 group disabled:opacity-50 disabled:pointer-events-none"
-      >
-        {isSubmitting ? (
-          <span className="h-6 w-6 border-4 border-background border-t-transparent rounded-full animate-spin"></span>
+      <div className="mt-3 px-4 flex justify-between items-center min-h-[20px]">
+        {error ? (
+          <p className="text-red-500 text-[10px] font-black animate-shake">{error}</p>
+        ) : success ? (
+          <p className="text-emerald-500 text-[10px] font-black animate-fade-in">✓ پیام با موفقیت ارسال شد</p>
         ) : (
-          <>
-            <span>ارسال پاسخ</span>
-            <span className="group-hover:translate-x-[-4px] transition-transform text-2xl">⚡</span>
-          </>
+          <p className="text-muted-foreground/40 text-[9px] font-bold">Shift + Enter برای خط بعدی</p>
         )}
-      </button>
+      </div>
     </form>
   );
 }

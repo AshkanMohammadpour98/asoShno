@@ -26,30 +26,46 @@ export async function getAllUsers(filters?: { search?: string; role?: Role; page
   }
 
   try {
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          role: true,
-          createdAt: true,
-          _count: {
-            select: { tickets: true, messages: true }
-          }
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+        _count: {
+          select: { tickets: true, messages: true }
+        },
+        tickets: {
+          where: {
+            messages: {
+              some: {
+                isAdmin: false,
+                isRead: false
+              }
+            }
+          },
+          select: { id: true }
         }
-      }),
-      prisma.user.count({ where })
-    ]);
+      }
+    });
+
+    const total = await prisma.user.count({ where });
+
+    // Map to include a hasUnread flag
+    const data = users.map(u => ({
+      ...u,
+      hasUnread: u.tickets.length > 0
+    }));
 
     return {
       success: true,
-      data: users,
+      data,
       pagination: {
         total,
         page,

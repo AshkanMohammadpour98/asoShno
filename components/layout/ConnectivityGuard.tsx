@@ -58,6 +58,10 @@ export default function ConnectivityGuard() {
       });
       clearTimeout(timeoutId);
 
+      if (!res.ok) {
+        throw new Error(`Service returned status ${res.status}`);
+      }
+
       const data: HealthResponse = await res.json();
 
       if (data.ok) {

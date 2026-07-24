@@ -60,7 +60,7 @@ export default function AboutPage() {
               className="object-cover scale-110"
              />
              <div className="absolute inset-0 bg-linear-to-t from-foreground/60 to-transparent flex items-end p-12">
-                <p className="text-white font-black text-2xl italic tracking-wider">"کیفیت و اصالت، میراث ماست"</p>
+                <p className="text-white font-black text-2xl italic tracking-wider">&quot;کیفیت و اصالت، میراث ماست&quot;</p>
              </div>
           </div>
           <div className="space-y-8">

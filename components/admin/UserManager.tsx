@@ -6,7 +6,13 @@ import { formatJalaliDate } from '@/lib/utils';
 import { Role } from '@prisma/client';
 import Image from 'next/image';
 
-export default function UserManager({ onShowUserTickets }: { onShowUserTickets: (userId: string) => void }) {
+export default function UserManager({
+  onShowUserTickets,
+  onShowTicket
+}: {
+  onShowUserTickets: (userId: string) => void;
+  onShowTicket: (userId: string, ticketId: string) => void;
+}) {
   const [users, setUsers] = useState<any[]>([]);
   const [pagination, setPagination] = useState<any>({});
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -96,7 +102,7 @@ export default function UserManager({ onShowUserTickets }: { onShowUserTickets: 
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar max-h-[500px] lg:max-h-none">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar max-h-[70vh] lg:max-h-none">
           {loading ? (
             <div className="flex justify-center p-10">
               <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
@@ -122,9 +128,14 @@ export default function UserManager({ onShowUserTickets }: { onShowUserTickets: 
                       <h4 className="font-black text-xs lg:text-sm truncate">{user.firstName} {user.lastName}</h4>
                       <p className={`text-[10px] font-bold opacity-60 dir-ltr text-right`}>{user.phone}</p>
                    </div>
-                   {user.role === 'ADMIN' && (
-                      <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${selectedUserId === user.id ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-600'}`}>ادمین</span>
-                   )}
+                   <div className="flex flex-col items-end gap-1">
+                      {user.role === 'ADMIN' && (
+                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${selectedUserId === user.id ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-600'}`}>ادمین</span>
+                      )}
+                      {user.hasUnread && (
+                        <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" title="پیام خوانده نشده"></span>
+                      )}
+                   </div>
                 </div>
               </button>
             ))
@@ -256,7 +267,11 @@ export default function UserManager({ onShowUserTickets }: { onShowUserTickets: 
                   ) : (
                     <div className="space-y-3">
                        {userDetails.tickets.map((ticket: any) => (
-                         <div key={ticket.id} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex justify-between items-center group">
+                         <button
+                            key={ticket.id}
+                            onClick={() => onShowTicket(userDetails.id, ticket.id)}
+                            className="w-full text-right p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex justify-between items-center group hover:border-indigo-500 transition-all shadow-sm"
+                         >
                             <div className="flex-1">
                                <h5 className="font-black text-sm text-slate-700 dark:text-slate-200 mb-1">{ticket.subject}</h5>
                                <p className="text-[10px] text-slate-400 line-clamp-1">{ticket.messages[0]?.content}</p>
@@ -270,7 +285,7 @@ export default function UserManager({ onShowUserTickets }: { onShowUserTickets: 
                                   {ticket.status === 'ANSWERED' ? 'پاسخ داده شده' : ticket.status === 'OPEN' ? 'در انتظار پاسخ' : 'بسته شده'}
                                </span>
                             </div>
-                         </div>
+                         </button>
                        ))}
                     </div>
                   )}

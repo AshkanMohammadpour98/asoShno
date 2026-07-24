@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import Cropper, { Point, Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/lib/image-utils';
 
 interface ImageCropModalProps {
@@ -13,12 +13,12 @@ interface ImageCropModalProps {
 }
 
 export default function ImageCropModal({ image, aspect, onCropComplete, onClose, title }: ImageCropModalProps) {
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsPending] = useState(false);
 
-  const onCropChange = useCallback((crop: { x: number; y: number }) => {
+  const onCropChange = useCallback((crop: Point) => {
     setCrop(crop);
   }, []);
 
@@ -26,16 +26,18 @@ export default function ImageCropModal({ image, aspect, onCropComplete, onClose,
     setZoom(zoom);
   }, []);
 
-  const onCropAreaComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+  const onCropAreaComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
   const handleConfirm = async () => {
     try {
       setIsPending(true);
-      const croppedImage = await getCroppedImg(image, croppedAreaPixels);
-      if (croppedImage) {
-        onCropComplete(croppedImage);
+      if (croppedAreaPixels) {
+        const croppedImage = await getCroppedImg(image, croppedAreaPixels);
+        if (croppedImage) {
+          onCropComplete(croppedImage);
+        }
       }
     } catch (e) {
       console.error(e);

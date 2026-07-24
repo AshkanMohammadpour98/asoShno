@@ -2,50 +2,112 @@
 
 import { useState, useEffect } from 'react';
 
+// Define the BeforeInstallPromptEvent type for TypeScript
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 export default function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Check if already in standalone mode
+    // 1. Check if already in standalone mode
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone
       || document.referrer.includes('android-app://');
 
     if (isStandalone) {
+      console.log('[PWA] Running in standalone mode, skipping prompt');
       return;
     }
 
+    // 2. Check if user dismissed it recently
+    const isDismissed = localStorage.getItem('pwa-prompt-dismissed');
+    if (isDismissed) {
+      console.log('[PWA] Prompt was dismissed by user');
+      return;
+    }
+
+    // 3. Logic to handle and store the prompt
+    const handlePrompt = (e?: any) => {
+      const prompt = e || (window as any).deferredPrompt;
+      if (prompt) {
+        console.log('[PWA] Installation prompt available!');
+        setDeferredPrompt(prompt);
+        setShowPrompt(true);
+      }
+    };
+
+    // Check window immediately (for late mounting components)
+    handlePrompt();
+
+    // Listen for custom event from layout.tsx
+    window.addEventListener('pwa-prompt-available', handlePrompt);
+
+    // Listen for native event (for early mounting components)
     const handler = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later.
-      setDeferredPrompt(e);
-      setShowPrompt(true);
+      console.log('[PWA] beforeinstallprompt event received');
+      (window as any).deferredPrompt = e;
+      handlePrompt(e);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    // 4. Listen for successful installation
+    const installedHandler = () => {
+      console.log('[PWA] App installed successfully');
+      setShowPrompt(false);
+      setDeferredPrompt(null);
+      (window as any).deferredPrompt = null;
+    };
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('pwa-prompt-available', handlePrompt);
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    // Try to get from state, fallback to window
+    const promptToUse = deferredPrompt || (window as any).deferredPrompt;
 
-    // Show the prompt
-    deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
-      console.log('User accepted the A2HS prompt');
-    } else {
-      console.log('User dismissed the A2HS prompt');
+    if (!promptToUse) {
+      console.warn('[PWA] No prompt available to trigger installation');
+      setShowPrompt(false);
+      return;
     }
 
-    setDeferredPrompt(null);
+    try {
+      // Trigger the browser's install prompt
+      await promptToUse.prompt();
+
+      // Wait for user choice
+      const { outcome } = await promptToUse.userChoice;
+      console.log(`[PWA] User choice: ${outcome}`);
+
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        (window as any).deferredPrompt = null;
+        setShowPrompt(false);
+      }
+    } catch (err) {
+      console.error('[PWA] Installation failed:', err);
+      setShowPrompt(false);
+    }
+  };
+
+  const handleDismiss = () => {
     setShowPrompt(false);
+    localStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
   if (!showPrompt) return null;
@@ -72,7 +134,7 @@ export default function InstallPrompt() {
           نصب اپلیکیشن
         </button>
         <button
-          onClick={() => setShowPrompt(false)}
+          onClick={handleDismiss}
           className="px-5 bg-muted text-muted-foreground h-11 rounded-xl text-xs font-bold hover:bg-muted/80 transition-all"
         >
           فعلاً نه
@@ -80,7 +142,7 @@ export default function InstallPrompt() {
       </div>
 
       <button
-        onClick={() => setShowPrompt(false)}
+        onClick={handleDismiss}
         className="absolute top-4 left-4 text-muted-foreground hover:text-foreground transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

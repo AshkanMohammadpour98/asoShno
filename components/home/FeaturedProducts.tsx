@@ -1,5 +1,6 @@
 import React from 'react';
 import SafeImage from '@/components/common/SafeImage';
+import WishlistButton from '@/components/shop/WishlistButton';
 import Link from 'next/link';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { formatPrice } from '@/lib/utils';
@@ -36,6 +37,10 @@ const FeaturedProducts = ({ products }: FeaturedProductsProps) => {
               >
                 {/* ... existing card content ... */}
                 <div className="aspect-square overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-muted/50 relative border border-transparent group-hover:border-primary/20 transition-all duration-700">
+                  <WishlistButton
+                    productId={product.id}
+                    className="absolute top-4 left-4 z-20 w-8 h-8 sm:w-10 sm:h-10"
+                  />
                   <SafeImage
                     src={getPublicImageUrl(product.images?.[0] || '/logo/logo.png')}
                     alt={product.name}

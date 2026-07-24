@@ -4,12 +4,13 @@ import FeaturedProducts from "@/components/home/FeaturedProducts";
 import RepairProcess from "@/components/home/RepairProcess";
 import LocationSection from "@/components/home/LocationSection";
 import Link from 'next/link';
-import { getLocalSettings, getFeaturedProducts } from "@/lib/db";
+import { getLocalSettings, getFeaturedProducts, getLocalHomeSlides } from "@/lib/db";
 import { getImageUrl } from "@/lib/upload-image";
 
 export default async function Home() {
   const settings = await getLocalSettings();
   const featuredData = await getFeaturedProducts(4);
+  const slides = await getLocalHomeSlides(true);
 
   // Sign URLs for featured products
   const products = await Promise.all(featuredData.map(async (p) => {
@@ -21,7 +22,7 @@ export default async function Home() {
 
   return (
     <>
-      <Hero settings={settings} />
+      <Hero settings={settings} slides={slides} />
       <ServicesBento settings={settings} />
       <FeaturedProducts products={products} />
       <RepairProcess settings={settings} />

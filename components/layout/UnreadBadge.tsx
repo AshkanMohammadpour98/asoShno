@@ -17,9 +17,18 @@ export default function UnreadBadge() {
     };
 
     fetchCount();
-    // Refresh every 2 minutes
+
+    // Listen for custom events to refresh live
+    const handleRefresh = () => fetchCount();
+    window.addEventListener('unread-count-refresh', handleRefresh);
+
+    // Refresh every 2 minutes as fallback
     const interval = setInterval(fetchCount, 120000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('unread-count-refresh', handleRefresh);
+    };
   }, []);
 
   if (count === 0) return null;

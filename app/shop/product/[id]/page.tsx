@@ -77,9 +77,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
-      <div className="container mx-auto px-4 pt-32 pb-12 lg:pt-44 lg:pb-20 text-right" dir="rtl">
+      <div className="container mx-auto px-4 pt-28 pb-12 lg:pt-36 lg:pb-20 text-right" dir="rtl">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-3 text-xs font-black text-muted-foreground mb-12 uppercase tracking-widest overflow-x-auto whitespace-nowrap pb-2">
+        <nav className="flex items-center gap-3 text-[10px] lg:text-xs font-black text-muted-foreground mb-8 lg:mb-12 uppercase tracking-widest overflow-x-auto whitespace-nowrap pb-2">
           <Link href="/" className="hover:text-primary transition-colors">خانه</Link>
           <span className="opacity-30">/</span>
           <Link href="/shop" className="hover:text-primary transition-colors">فروشگاه</Link>
@@ -87,13 +87,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <span className="text-foreground">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 xl:gap-20 mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-20 mb-20 lg:mb-32">
 
           {/* Gallery Section */}
           <div className="lg:col-span-7 space-y-6">
             <div
               onClick={() => setIsLightboxOpen(true)}
-              className="relative aspect-square sm:aspect-video lg:aspect-square rounded-[3.5rem] overflow-hidden bg-muted border border-border group shadow-sm transition-all duration-500 hover:shadow-xl cursor-zoom-in"
+              className="relative aspect-square sm:aspect-video lg:aspect-square rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden bg-muted border border-border group shadow-sm transition-all duration-500 hover:shadow-xl cursor-zoom-in"
             >
               {product.images?.[activeImage] ? (
                 <SafeImage
@@ -192,7 +192,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
-            <div className="bg-card border border-border rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-sm relative overflow-hidden">
+            <div className="bg-card border border-border rounded-[2rem] lg:rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-sm relative overflow-hidden">
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-[9px] lg:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 lg:mb-2">قیمت نهایی</p>

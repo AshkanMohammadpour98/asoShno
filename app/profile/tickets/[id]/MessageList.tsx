@@ -4,20 +4,26 @@ import React, { useState } from 'react';
 import { formatJalaliDate } from '@/lib/utils';
 import { editMessage, deleteMessage } from '@/lib/actions/tickets';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface Message {
   id: string;
   content: string;
   isAdmin: boolean;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: Date | string;
   senderId: string;
 }
 
-export default function MessageList({ initialMessages, currentUserId }: { initialMessages: any[], currentUserId: string }) {
+export default function MessageList({ initialMessages, currentUserId }: { initialMessages: Message[], currentUserId: string }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+
+  // Notify Navbar that unread count might have changed (since markAsRead is called on the server before this page renders)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('unread-count-refresh'));
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm('آیا از حذف این پیام اطمینان دارید؟')) return;

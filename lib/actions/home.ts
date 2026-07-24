@@ -10,6 +10,7 @@ export async function getHomeSlidesAction(onlyActive = false) {
     const data = await getLocalHomeSlides(onlyActive);
     return { success: true, data };
   } catch (error) {
+    console.error('Get Home Slides Error:', error);
     return { success: false, error: 'خطا در دریافت اسلایدرها' };
   }
 }
@@ -22,6 +23,8 @@ export async function createHomeSlideAction(formData: FormData) {
     const ctaText = formData.get('ctaText') as string;
     const priority = Number(formData.get('priority')) || 0;
     const isActive = formData.get('isActive') === 'true';
+    const textColor = formData.get('textColor') as string || null;
+    const buttonColor = formData.get('buttonColor') as string || null;
 
     const imageFile = formData.get('image') as File;
     const mobileImageFile = formData.get('mobileImage') as File;
@@ -44,13 +47,15 @@ export async function createHomeSlideAction(formData: FormData) {
       link,
       ctaText,
       priority,
-      isActive
+      isActive,
+      textColor,
+      buttonColor
     });
 
     revalidatePath('/');
     revalidatePath('/admin');
     return { success: true, data: slide };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Create Home Slide Error:', error);
     return { success: false, error: 'خطا در ایجاد اسلاید' };
   }
@@ -64,6 +69,8 @@ export async function updateHomeSlideAction(id: string, formData: FormData) {
     const ctaText = formData.get('ctaText') as string;
     const priority = Number(formData.get('priority')) || 0;
     const isActive = formData.get('isActive') === 'true';
+    const textColor = formData.get('textColor') as string || null;
+    const buttonColor = formData.get('buttonColor') as string || null;
 
     const imageFile = formData.get('image') as File;
     const mobileImageFile = formData.get('mobileImage') as File;
@@ -76,7 +83,9 @@ export async function updateHomeSlideAction(id: string, formData: FormData) {
       link,
       ctaText,
       priority,
-      isActive
+      isActive,
+      textColor,
+      buttonColor
     };
 
     if (imageFile && imageFile.size > 0) {
@@ -97,7 +106,7 @@ export async function updateHomeSlideAction(id: string, formData: FormData) {
     revalidatePath('/');
     revalidatePath('/admin');
     return { success: true, data: slide };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Update Home Slide Error:', error);
     return { success: false, error: 'خطا در بروزرسانی اسلاید' };
   }
@@ -113,6 +122,7 @@ export async function deleteHomeSlideAction(id: string, imageUrl: string, mobile
     revalidatePath('/admin');
     return { success: true };
   } catch (error) {
+    console.error('Delete Home Slide Error:', error);
     return { success: false, error: 'خطا در حذف اسلاید' };
   }
 }
@@ -124,6 +134,7 @@ export async function toggleHomeSlideAction(id: string, isActive: boolean) {
     revalidatePath('/admin');
     return { success: true };
   } catch (error) {
+    console.error('Toggle Home Slide Error:', error);
     return { success: false, error: 'خطا در تغییر وضعیت اسلاید' };
   }
 }

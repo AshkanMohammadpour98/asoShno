@@ -27,6 +27,7 @@ export async function toggleWishlist(productId: string) {
         where: { id: existing.id }
       });
       revalidatePath(`/shop/product/${productId}`);
+      revalidatePath("/admin");
       return { success: true, action: 'REMOVED' };
     } else {
       await prisma.wishlist.create({
@@ -36,6 +37,7 @@ export async function toggleWishlist(productId: string) {
         }
       });
       revalidatePath(`/shop/product/${productId}`);
+      revalidatePath("/admin");
       return { success: true, action: 'ADDED' };
     }
   } catch (error) {
@@ -44,24 +46,21 @@ export async function toggleWishlist(productId: string) {
   }
 }
 
-export async function getWishlistStatus(productId: string) {
+export async function getWishlistIds() {
   try {
     const session = await auth();
     if (!session || !session.user || !session.user.id) {
-      return { success: true, isInWishlist: false };
+      return [];
     }
 
-    const existing = await prisma.wishlist.findUnique({
-      where: {
-        userId_productId: {
-          userId: session.user.id,
-          productId
-        }
-      }
+    const items = await prisma.wishlist.findMany({
+      where: { userId: session.user.id },
+      select: { productId: true }
     });
 
-    return { success: true, isInWishlist: !!existing };
+    return items.map(item => item.productId);
   } catch (error) {
-    return { success: false, isInWishlist: false };
+    console.error('getWishlistIds error:', error);
+    return [];
   }
 }

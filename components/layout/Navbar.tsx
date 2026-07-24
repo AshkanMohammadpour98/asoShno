@@ -6,9 +6,12 @@ import { usePathname } from 'next/navigation';
 import CartDrawer from './CartDrawer';
 import SearchModal from './SearchModal';
 import ThemeToggle from './ThemeToggle';
+import UnreadBadge from './UnreadBadge';
 import { useCart } from '../providers/CartProvider';
+import { useWishlist } from '../providers/WishlistProvider';
 import type { SiteSettings } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
+import { FiSearch, FiHeart } from 'react-icons/fi';
 
 const navLinks = [
   { name: 'فروشگاه', href: '/shop' },
@@ -21,6 +24,7 @@ const navLinks = [
 
 const Navbar = ({ settings, session }: { settings: SiteSettings, session: any }) => {
   const { totalCount } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -73,8 +77,20 @@ const Navbar = ({ settings, session }: { settings: SiteSettings, session: any })
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">🔍</button>
+            <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50 text-foreground">
+              <FiSearch className="text-lg" />
+            </button>
             <div className="hidden sm:block"><ThemeToggle /></div>
+
+            <Link href="/profile/wishlist" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50 text-foreground">
+              <FiHeart className={`${wishlistCount > 0 ? 'fill-red-500 stroke-red-500' : ''} text-lg transition-colors`} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[8px] font-bold text-white flex items-center justify-center border-2 border-background animate-in zoom-in duration-300">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+
             <button onClick={() => setIsCartOpen(true)} className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-all border border-border/50">
               🛒 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[8px] font-bold text-white flex items-center justify-center border-2 border-background">{totalCount}</span>
             </button>
@@ -82,13 +98,22 @@ const Navbar = ({ settings, session }: { settings: SiteSettings, session: any })
             <div className="hidden md:block h-6 w-px bg-border mx-1"></div>
 
             {isLoggedIn ? (
-              <Link
-                href={isAdmin ? "/admin" : "/profile"}
-                className="flex h-9 sm:h-10 items-center px-3 sm:px-6 rounded-xl bg-secondary text-foreground text-[10px] sm:text-xs font-black border border-border hover:bg-muted transition-all gap-2"
-              >
-                <span className="hidden md:inline">{isAdmin ? 'پنل مدیریت' : 'حساب کاربری'}</span>
-                <span className="text-lg sm:text-base">👤</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/profile/tickets"
+                  className="relative flex h-9 sm:h-10 w-9 sm:w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100 transition-all"
+                >
+                  <UnreadBadge />
+                  <span className="text-lg">📨</span>
+                </Link>
+                <Link
+                  href={isAdmin ? "/admin" : "/profile"}
+                  className="relative flex h-9 sm:h-10 items-center px-3 sm:px-6 rounded-xl bg-secondary text-foreground text-[10px] sm:text-xs font-black border border-border hover:bg-muted transition-all gap-2"
+                >
+                  <span className="hidden md:inline">{isAdmin ? 'پنل مدیریت' : 'حساب کاربری'}</span>
+                  <span className="text-lg sm:text-base">👤</span>
+                </Link>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link href="/login" className="flex h-9 sm:h-10 items-center px-3 sm:px-6 rounded-xl bg-muted/50 text-foreground text-[10px] sm:text-xs font-black hover:bg-muted transition-all">ورود</Link>

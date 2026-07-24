@@ -18,7 +18,6 @@ export async function getSiteSettings() {
 export async function updateSiteSettings(
   settings: SiteSettings,
   files?: {
-    heroImage?: File,
     logo?: File,
     pwaLogo?: File,
     favicon?: File,
@@ -30,15 +29,6 @@ export async function updateSiteSettings(
     const currentSettings = { ...settings };
     const existing = await prisma.siteSettings.findUnique({ where: { id: 'main' } });
     const existingSettings = existing?.settings as any;
-
-    // Handle Hero Image Upload
-    if (files?.heroImage) {
-      if (existingSettings?.home?.heroImage) {
-          await deleteS3Object(existingSettings.home.heroImage);
-      }
-      const key = await uploadSystemImage('hero', files.heroImage);
-      currentSettings.home.heroImage = key;
-    }
 
     // Handle Logo Upload
     if (files?.logo) {

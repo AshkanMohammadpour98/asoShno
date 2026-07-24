@@ -10,6 +10,7 @@ CLAUDE.md
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
 
 # Environment Variables (Handle via Liara Console)
 .env

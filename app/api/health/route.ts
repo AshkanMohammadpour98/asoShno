@@ -7,15 +7,12 @@ export async function GET() {
   const start = Date.now();
 
   try {
-    // Ultra-lightweight query to check DB connectivity
+    // Basic connectivity check
     await prisma.$queryRaw`SELECT 1`;
 
     return NextResponse.json({
       ok: true,
-      services: {
-        backend: true,
-        database: true
-      },
+      status: 'operational',
       latency: `${Date.now() - start}ms`
     }, {
       status: 200,
@@ -24,19 +21,7 @@ export async function GET() {
       }
     });
   } catch (error: any) {
-    console.error('[HealthCheck] Database error:', error.message);
-
-    return NextResponse.json({
-      ok: false,
-      services: {
-        backend: true,
-        database: false
-      }
-    }, {
-      status: 503,
-      headers: {
-        'Cache-Control': 'no-store, max-age=0',
-      }
-    });
+    console.error('[HealthCheck] DB Error:', error.message);
+    return NextResponse.json({ ok: false, error: 'Database connection failed' }, { status: 503 });
   }
 }

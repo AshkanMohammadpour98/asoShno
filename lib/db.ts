@@ -7,7 +7,8 @@ import {
   SiteSettings,
   BlogPost,
   BlogCategory,
-  Announcement
+  Announcement,
+  HomeSlide
 } from './types';
 import { toEnglishDigits } from './utils';
 
@@ -371,7 +372,7 @@ export async function getLocalSettings(): Promise<SiteSettings> {
       heroSubtitle: "واردات مستقیم از دبی",
       heroButtonText: "مشاهده محصولات",
       heroButtonLink: "/shop",
-      heroImage: "hero/maniHeroCart/HeroImageJul (1).png",
+      heroLayout: 'side-by-side',
       banners: [],
       servicesTitle: "چرا آسو شنو؟",
       servicesSubtitle: "تمایز ما در اصالت کالا و تخصص ۲۵ ساله ما در بازار تکنولوژی اشنویه و خاورمیانه است.",
@@ -455,7 +456,7 @@ export async function getLocalSettings(): Promise<SiteSettings> {
         heroSubtitle: s?.home?.heroSubtitle || defaultSettings.home.heroSubtitle,
         heroButtonText: s?.home?.heroButtonText || defaultSettings.home.heroButtonText,
         heroButtonLink: s?.home?.heroButtonLink || defaultSettings.home.heroButtonLink,
-        heroImage: s?.home?.heroImage || record.footerText /* legacy mapping if any */ || defaultSettings.home.heroImage,
+        heroLayout: s?.home?.heroLayout || defaultSettings.home.heroLayout,
         banners: s?.home?.banners || defaultSettings.home.banners,
         servicesTitle: s?.home?.servicesTitle || defaultSettings.home.servicesTitle,
         servicesSubtitle: s?.home?.servicesSubtitle || defaultSettings.home.servicesSubtitle,
@@ -472,8 +473,18 @@ export async function getLocalSettings(): Promise<SiteSettings> {
         aboutText: record.footerText || s?.footer?.aboutText || defaultSettings.footer.aboutText,
         copyright: s?.footer?.copyright || defaultSettings.footer.copyright
       },
-      pages: s?.pages || defaultSettings.pages,
-      features: s?.features || defaultSettings.features
+      pages: {
+        aboutUs: s?.pages?.aboutUs || defaultSettings.pages.aboutUs,
+        contactUs: s?.pages?.contactUs || defaultSettings.pages.contactUs,
+        rules: s?.pages?.rules || defaultSettings.pages.rules,
+        buyingGuide: s?.pages?.buyingGuide || defaultSettings.pages.buyingGuide
+      },
+      features: {
+        shipping: s?.features?.shipping || defaultSettings.features.shipping,
+        warranty: s?.features?.warranty || defaultSettings.features.warranty,
+        payment: s?.features?.payment || defaultSettings.features.payment,
+        support: s?.features?.support || defaultSettings.features.support
+      }
     } as SiteSettings;
   } catch (error: any) {
     console.error(`[DB] getLocalSettings Error: ${error.code || 'unknown'} - ${error.message}`);
@@ -780,3 +791,82 @@ export async function deleteLocalAnnouncement(id: string) {
     where: { id }
   });
 }
+
+/**
+ * Home Slides CRUD
+ */
+export async function getLocalHomeSlides(onlyActive = false) {
+  try {
+    const where: any = {};
+    if (onlyActive) {
+      where.isActive = true;
+    }
+
+    const slides = await prisma.homeSlide.findMany({
+      where,
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    return slides.map((s: any) => ({
+      ...s,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString()
+    })) as HomeSlide[];
+  } catch (error: any) {
+    console.error(`[DB] getLocalHomeSlides Error: ${error.code || 'unknown'} - ${error.message}`);
+    return [];
+  }
+}
+
+export async function addLocalHomeSlide(data: Omit<HomeSlide, 'id' | 'createdAt' | 'updatedAt'>) {
+  const newSlide = await prisma.homeSlide.create({
+    data: {
+      title: data.title,
+      subtitle: data.subtitle,
+      image: data.image,
+      mobileImage: data.mobileImage,
+      link: data.link,
+      ctaText: data.ctaText,
+      priority: Number(data.priority) || 0,
+      isActive: data.isActive,
+      textColor: data.textColor,
+      buttonColor: data.buttonColor
+    }
+  });
+
+  return {
+    ...newSlide,
+    createdAt: newSlide.createdAt.toISOString(),
+    updatedAt: newSlide.updatedAt.toISOString()
+  } as HomeSlide;
+}
+
+export async function updateLocalHomeSlide(id: string, data: Partial<HomeSlide>) {
+  const updateData: any = { ...data };
+  if (data.priority !== undefined) updateData.priority = Number(data.priority) || 0;
+
+  delete updateData.id;
+  delete updateData.createdAt;
+  delete updateData.updatedAt;
+
+  const updated = await prisma.homeSlide.update({
+    where: { id },
+    data: updateData
+  });
+
+  return {
+    ...updated,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString()
+  } as HomeSlide;
+}
+
+export async function deleteLocalHomeSlide(id: string) {
+  await prisma.homeSlide.delete({
+    where: { id }
+  });
+}
+

@@ -14,12 +14,12 @@ export default async function ProfilePage() {
   const user = session.user as any;
 
   return (
-    <div className="min-h-screen bg-secondary py-20 px-4">
+    <div className="min-h-screen bg-secondary py-12 lg:py-24 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-card border border-border rounded-[3rem] p-10 lg:p-14 shadow-2xl relative overflow-hidden text-right">
-          <div className="absolute top-0 left-0 w-full h-2 bg-primary"></div>
+        <div className="bg-card border border-border rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-14 shadow-2xl relative overflow-hidden text-right">
+          <div className="absolute top-0 left-0 w-full h-1.5 lg:h-2 bg-primary"></div>
 
-          <div className="flex flex-col md:flex-row-reverse items-center gap-8 mb-12">
+          <div className="flex flex-col md:flex-row-reverse items-center gap-6 lg:gap-8 mb-8 lg:mb-12">
             <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center text-4xl border-4 border-primary/20">
               👤
             </div>
@@ -58,6 +58,10 @@ export default async function ProfilePage() {
                     پنل مدیریت
                   </Link>
                 )}
+                <Link href="/profile/tickets" className="relative w-full h-16 bg-indigo-500 text-white rounded-2xl flex items-center justify-center font-black hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/20">
+                  پیام‌ها و پشتیبانی
+                  <span className="mr-3 text-xl">📨</span>
+                </Link>
                 <Link href="/" className="w-full h-16 bg-secondary text-foreground rounded-2xl flex items-center justify-center font-black hover:scale-[1.02] transition-all border border-border">
                   بازگشت به صفحه اصلی
                 </Link>

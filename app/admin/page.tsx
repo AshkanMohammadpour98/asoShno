@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   getProducts,
@@ -38,16 +37,44 @@ import {
   deleteAnnouncementAction,
   toggleAnnouncementAction
 } from '@/lib/actions/announcements';
-import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant, Announcement } from '@/lib/types';
+import {
+  getHomeSlidesAction,
+  createHomeSlideAction,
+  updateHomeSlideAction,
+  deleteHomeSlideAction,
+  toggleHomeSlideAction
+} from '@/lib/actions/home';
+import type { LocalProduct, LocalCategory, LocalBrand, LocalAttribute, SiteSettings, BlogPost, BlogCategory, LocalProductVariant, Announcement, HomeSlide } from '@/lib/types';
 import { getPublicImageUrl } from '@/lib/upload-image';
 import { formatPrice, parsePrice, toEnglishDigits } from '@/lib/utils';
+import { FiSearch, FiLayout, FiBox, FiFolder, FiStar, FiFileText, FiBell, FiMessageSquare, FiUsers, FiSettings, FiLogOut, FiMenu, FiX, FiCheck, FiTrash2, FiEdit, FiPlus, FiEye } from 'react-icons/fi';
 import ProductSelector from '@/components/shop/ProductSelector';
 import LedgerManager from '@/components/admin/LedgerManager';
+import TicketManager from '@/components/admin/TicketManager';
+import UserManager from '@/components/admin/UserManager';
+import ImageCropModal from '@/components/admin/ImageCropModal';
 
 export default function AdminDashboard() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedUserIdForTickets, setSelectedUserIdForTickets] = useState<string | undefined>(undefined);
+  const [selectedTicketIdForTickets, setSelectedTicketIdForTickets] = useState<string | undefined>(undefined);
+
+  // Cropper State
+  const [cropModal, setCropModal] = useState<{
+    isOpen: boolean;
+    image: string;
+    aspect: number;
+    title: string;
+    onComplete: (blob: Blob) => void;
+  }>({
+    isOpen: false,
+    image: '',
+    aspect: 1,
+    title: 'برش تصویر',
+    onComplete: () => {}
+  });
+
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [categories, setCategories] = useState<LocalCategory[]>([]);
   const [brands, setBrands] = useState<LocalBrand[]>([]);
@@ -59,6 +86,13 @@ export default function AdminDashboard() {
   const [isAddingAnnouncement, setIsAddingAnnouncement] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [announcementImagePreview, setAnnouncementImagePreview] = useState<string | null>(null);
+
+  // Slider State
+  const [slides, setSlides] = useState<HomeSlide[]>([]);
+  const [isAddingSlide, setIsAddingSlide] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<HomeSlide | null>(null);
+  const [slideImagePreview, setSlideImagePreview] = useState<string | null>(null);
+  const [slideMobileImagePreview, setSlideMobileImagePreview] = useState<string | null>(null);
 
   // UI State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -85,10 +119,23 @@ export default function AdminDashboard() {
 
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
+  const MAX_FILE_SIZE_MB = 10;
+  const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+  const checkFileSize = (file: File | null): boolean => {
+    if (file && file.size > MAX_FILE_SIZE) {
+      setNotification({
+        message: `حجم فایل ${file.name} بیش از حد مجاز (${MAX_FILE_SIZE_MB} مگابایت) است.`,
+        type: 'error'
+      });
+      return false;
+    }
+    return true;
+  };
+
   // CMS State
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const [cmsFiles, setCmsFiles] = useState<{
-    heroImage?: File,
     logo?: File,
     pwaLogo?: File,
     favicon?: File,
@@ -96,7 +143,6 @@ export default function AdminDashboard() {
     services: {index: number, file: File}[]
   }>({banners: [], services: []});
   const [previews, setPreviews] = useState<{
-    hero?: string,
     logo?: string,
     pwaLogo?: string,
     favicon?: string,
@@ -180,6 +226,11 @@ export default function AdminDashboard() {
     if (res.success) setAnnouncements(res.data || []);
   }
 
+  async function fetchSlides() {
+    const res = await getHomeSlidesAction();
+    if (res.success) setSlides(res.data || []);
+  }
+
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -197,7 +248,8 @@ export default function AdminDashboard() {
       fetchBlogPosts(),
       fetchBlogCategories(),
       fetchFeatured(),
-      fetchAnnouncements()
+      fetchAnnouncements(),
+      fetchSlides()
     ]).finally(() => {
       setLoading(false);
     });
@@ -224,9 +276,25 @@ export default function AdminDashboard() {
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setMainImage(file);
+      if (file.size > 1.5 * 1024 * 1024) {
+        setNotification({ message: 'حجم تصویر محصول نباید بیشتر از ۱.۵ مگابایت باشد.', type: 'error' });
+        return;
+      }
       const reader = new FileReader();
-      reader.onloadend = () => setMainImagePreview(reader.result as string);
+      reader.onload = () => {
+        setCropModal({
+          isOpen: true,
+          image: reader.result as string,
+          aspect: 1,
+          title: 'برش تصویر اصلی محصول (۱:۱)',
+          onComplete: (blob) => {
+            const croppedFile = new File([blob], file.name, { type: 'image/webp' });
+            setMainImage(croppedFile);
+            setMainImagePreview(URL.createObjectURL(blob));
+            setCropModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -234,15 +302,29 @@ export default function AdminDashboard() {
   const handleGalleryImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const newImages = [...galleryImages];
-      newImages[index] = file;
-      setGalleryImages(newImages);
-
-      const newPreviews = [...galleryPreviews];
+      if (file.size > 1.5 * 1024 * 1024) {
+        setNotification({ message: 'حجم هر تصویر گالری نباید بیشتر از ۱.۵ مگابایت باشد.', type: 'error' });
+        return;
+      }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews[index] = reader.result as string;
-        setGalleryPreviews(newPreviews);
+      reader.onload = () => {
+        setCropModal({
+          isOpen: true,
+          image: reader.result as string,
+          aspect: 1,
+          title: `برش تصویر گالری ${index + 1} (۱:۱)`,
+          onComplete: (blob) => {
+            const croppedFile = new File([blob], file.name, { type: 'image/webp' });
+            const newImages = [...galleryImages];
+            newImages[index] = croppedFile;
+            setGalleryImages(newImages);
+
+            const newPreviews = [...galleryPreviews];
+            newPreviews[index] = URL.createObjectURL(blob);
+            setGalleryPreviews(newPreviews);
+            setCropModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -293,9 +375,15 @@ export default function AdminDashboard() {
     setVariants(prev => [...prev, { colorName: '', stock: 0 }]);
   };
 
-  const updateVariant = (index: number, field: keyof LocalProductVariant, val: any) => {
+  const updateVariant = (index: number, field: keyof LocalProductVariant, val: string | number) => {
     const newVariants = [...variants];
-    (newVariants[index] as any)[field] = field === 'stock' ? Number(val) : val;
+    const variant = { ...newVariants[index] };
+    if (field === 'stock') {
+      variant.stock = Number(val);
+    } else {
+      (variant as any)[field] = val;
+    }
+    newVariants[index] = variant;
     setVariants(newVariants);
   };
 
@@ -319,6 +407,13 @@ export default function AdminDashboard() {
 
   const handleSubmitProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Check file sizes
+    if (mainImage instanceof File && !checkFileSize(mainImage)) return;
+    for (const img of galleryImages) {
+      if (img instanceof File && !checkFileSize(img)) return;
+    }
+
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
 
@@ -445,16 +540,13 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleCmsFileUpload = (type: 'hero' | 'logo' | 'pwaLogo' | 'favicon' | 'banner' | 'service', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+  const handleCmsFileUpload = (type: 'logo' | 'pwaLogo' | 'favicon' | 'banner' | 'service', e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (type === 'hero') {
-        setCmsFiles(prev => ({ ...prev, heroImage: file }));
-        setPreviews(prev => ({ ...prev, hero: reader.result as string }));
-      } else if (type === 'logo') {
+      if (type === 'logo') {
         setCmsFiles(prev => ({ ...prev, logo: file }));
         setPreviews(prev => ({ ...prev, logo: reader.result as string }));
       } else if (type === 'pwaLogo') {
@@ -490,9 +582,16 @@ export default function AdminDashboard() {
 
   const handleSaveSettings = async () => {
     if (!siteSettings) return;
+
+    // Check all CMS files
+    if (cmsFiles.logo && !checkFileSize(cmsFiles.logo)) return;
+    if (cmsFiles.pwaLogo && !checkFileSize(cmsFiles.pwaLogo)) return;
+    if (cmsFiles.favicon && !checkFileSize(cmsFiles.favicon)) return;
+    for (const b of cmsFiles.banners) if (!checkFileSize(b.file)) return;
+    for (const s of cmsFiles.services) if (!checkFileSize(s.file)) return;
+
     setIsSubmitting(true);
     const res = await updateSiteSettings(siteSettings, {
-      heroImage: cmsFiles.heroImage,
       logo: cmsFiles.logo,
       pwaLogo: cmsFiles.pwaLogo,
       favicon: cmsFiles.favicon,
@@ -514,9 +613,9 @@ export default function AdminDashboard() {
     // اگر از قبل 4 تا دستی داشتیم، آخرین (بر اساس تاریخ آپدیت) را برمیداریم؟
     // فعلاً فقط تیک می‌زنیم، لیست بر اساس updatedAt مرتب شده و take(4) می‌شود.
     const res = await updateProduct(product.id, {
-        ...product as any,
+        ...product,
         isFeatured: true
-    });
+    } as any);
 
     if (res.success) {
         setNotification({ message: 'محصول به لیست پیشنهادی اضافه شد', type: 'success' });
@@ -531,9 +630,9 @@ export default function AdminDashboard() {
   const handleRemoveFeatured = async (product: LocalProduct) => {
     setIsSubmitting(true);
     const res = await updateProduct(product.id, {
-        ...product as any,
+        ...product,
         isFeatured: false
-    });
+    } as any);
 
     if (res.success) {
         setNotification({ message: 'محصول از لیست پیشنهادی حذف شد', type: 'success' });
@@ -546,8 +645,12 @@ export default function AdminDashboard() {
 
   const handleAnnouncementSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
+    const imageFile = formData.get('image') as File;
+
+    if (imageFile && imageFile.size > 0 && !checkFileSize(imageFile)) return;
+
+    setIsSubmitting(true);
 
     // Convert checkbox to string 'true'/'false' for Server Action
     formData.set('isActive', (formData.get('isActive') === 'on').toString());
@@ -609,13 +712,91 @@ export default function AdminDashboard() {
     }
   };
 
+  // Slider Handlers
+  const handleSlideSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const imageFile = formData.get('image') as File;
+    const mobileImageFile = formData.get('mobileImage') as File;
+
+    if (imageFile && imageFile.size > 0 && !checkFileSize(imageFile)) return;
+    if (mobileImageFile && mobileImageFile.size > 0 && !checkFileSize(mobileImageFile)) return;
+
+    setIsSubmitting(true);
+    formData.set('isActive', (formData.get('isActive') === 'on').toString());
+
+    let res;
+    if (editingSlide) {
+      formData.append('existingImageUrl', editingSlide.image);
+      formData.append('existingMobileImageUrl', editingSlide.mobileImage || '');
+      res = await updateHomeSlideAction(editingSlide.id, formData);
+    } else {
+      res = await createHomeSlideAction(formData);
+    }
+
+    if (res.success) {
+      setNotification({ message: 'اسلاید با موفقیت ذخیره شد', type: 'success' });
+      setIsAddingSlide(false);
+      setEditingSlide(null);
+      setSlideImagePreview(null);
+      setSlideMobileImagePreview(null);
+      fetchSlides();
+    } else {
+      setNotification({ message: res.error || 'خطا در ذخیره اسلاید', type: 'error' });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleEditSlide = (slide: HomeSlide) => {
+    setEditingSlide(slide);
+    setSlideImagePreview(slide.image);
+    setSlideMobileImagePreview(slide.mobileImage || null);
+    setIsAddingSlide(true);
+    setActiveTab('slider');
+  };
+
+  const handleDeleteSlide = async (id: string, imageUrl: string, mobileImageUrl?: string | null) => {
+    if (!confirm('آیا از حذف این اسلاید مطمئن هستید؟')) return;
+    const res = await deleteHomeSlideAction(id, imageUrl, mobileImageUrl);
+    if (res.success) {
+      setNotification({ message: 'اسلاید حذف شد', type: 'success' });
+      fetchSlides();
+    } else {
+      setNotification({ message: res.error || 'خطا در حذف اسلاید', type: 'error' });
+    }
+  };
+
+  const handleToggleSlide = async (id: string, isActive: boolean) => {
+    const res = await toggleHomeSlideAction(id, isActive);
+    if (res.success) {
+      setNotification({ message: `اسلاید ${isActive ? 'فعال' : 'غیرفعال'} شد`, type: 'success' });
+      fetchSlides();
+    }
+  };
+
   // Blog Handlers
   const handlePostImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPostImage(file);
+      if (file.size > 2 * 1024 * 1024) {
+        setNotification({ message: 'حجم تصویر مقاله نباید بیشتر از ۲ مگابایت باشد.', type: 'error' });
+        return;
+      }
       const reader = new FileReader();
-      reader.onloadend = () => setPostImagePreview(reader.result as string);
+      reader.onload = () => {
+        setCropModal({
+          isOpen: true,
+          image: reader.result as string,
+          aspect: 1.6, // 800:500
+          title: 'برش تصویر شاخص مقاله (۱۶:۹)',
+          onComplete: (blob) => {
+            const croppedFile = new File([blob], file.name, { type: 'image/webp' });
+            setPostImage(croppedFile);
+            setPostImagePreview(URL.createObjectURL(blob));
+            setCropModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -688,7 +869,10 @@ export default function AdminDashboard() {
 
   const tabs = [
     { id: 'overview', label: 'پیشخوان', icon: '📊' },
+    { id: 'users', label: 'کاربران', icon: '👥' },
+    { id: 'tickets', label: 'پیام‌ها و تیکت‌ها', icon: '📨' },
     { id: 'products', label: 'محصولات', icon: '💻' },
+    { id: 'slider', label: 'اسلایدر هیرو', icon: '🖼️' },
     { id: 'cms', label: 'مدیریت محتوا (CMS)', icon: '📝' },
     { id: 'ledger', label: 'دفترچه حساب', icon: '📒' },
     { id: 'announcements', label: 'اعلان‌ها', icon: '🔔' },
@@ -746,7 +930,13 @@ export default function AdminDashboard() {
           {tabs.map((item) => (
             <button
               key={item.id}
-              onClick={() => { setActiveTab(item.id); setIsAddingProduct(false); resetForm(); setIsMobileMenuOpen(false); }}
+              onClick={() => {
+                setActiveTab(item.id);
+                setIsAddingProduct(false);
+                resetForm();
+                setIsMobileMenuOpen(false);
+                if (item.id === 'tickets') setSelectedUserIdForTickets(undefined);
+              }}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${
                 activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
@@ -803,7 +993,7 @@ export default function AdminDashboard() {
                           onChange={(e) => setListFilters(prev => ({ ...prev, search: e.target.value }))}
                           className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-12 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-950 transition-all"
                         />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                        <FiSearch className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity" />
                       </div>
                     </div>
                     <div className="w-full sm:w-48 space-y-2">
@@ -991,35 +1181,49 @@ export default function AdminDashboard() {
                         {openSections.includes('images') && (
                           <div className="p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10">
                              <div className="lg:col-span-5 space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase mr-2">تصویر اصلی</label>
-                                <div onClick={() => document.getElementById('main-up')?.click()} className="aspect-square rounded-[2.5rem] border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                                <div className="flex flex-col gap-1 mr-2">
+                                   <label className="text-[10px] font-black text-slate-400 uppercase">تصویر اصلی محصول</label>
+                                   <p className="text-[9px] font-bold text-indigo-500 leading-relaxed">
+                                      سایز پیشنهادی: ۸۰۰x۸۰۰ (۱:۱) • حداکثر ۱.۵ مگابایت • WebP/PNG
+                                   </p>
+                                </div>
+                                <div onClick={() => document.getElementById('main-up')?.click()} className="aspect-square rounded-[2.5rem] border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden group/img">
                                    <input type="file" id="main-up" className="hidden" accept="image/*" onChange={handleMainImageChange} />
                                    {mainImagePreview ? (
                                      <Image
-                                       src={mainImagePreview.startsWith('data:') ? mainImagePreview : getPublicImageUrl(mainImagePreview)}
+                                       src={mainImagePreview.startsWith('data:') || mainImagePreview.startsWith('blob:') ? mainImagePreview : getPublicImageUrl(mainImagePreview)}
                                        alt=""
                                        fill
                                        className="object-contain p-6"
                                        sizes="(max-width: 768px) 100vw, 400px"
                                      />
                                    ) : <span className="text-4xl text-slate-300">📸</span>}
+                                   <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="bg-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg">تغییر و کادربندی</span>
+                                   </div>
                                 </div>
                              </div>
                              <div className="lg:col-span-7 space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase mr-2">تصاویر گالری (۳ عدد)</label>
+                                <div className="flex flex-col gap-1 mr-2">
+                                   <label className="text-[10px] font-black text-slate-400 uppercase">تصاویر گالری (۳ عدد)</label>
+                                   <p className="text-[9px] font-bold text-slate-400">کادربندی مربعی برای تمام تصاویر الزامی است.</p>
+                                </div>
                                 <div className="grid grid-cols-3 gap-3 sm:gap-4">
                                    {[0,1,2].map(i => (
-                                     <div key={i} onClick={() => document.getElementById(`gal-up-${i}`)?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-400 transition-all relative overflow-hidden">
+                                     <div key={i} onClick={() => document.getElementById(`gal-up-${i}`)?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-400 transition-all relative overflow-hidden group/gal">
                                         <input type="file" id={`gal-up-${i}`} className="hidden" accept="image/*" onChange={(e) => handleGalleryImageChange(i, e)} />
                                         {galleryPreviews[i] ? (
                                           <Image
-                                            src={galleryPreviews[i]!.startsWith('data:') ? galleryPreviews[i]! : getPublicImageUrl(galleryPreviews[i]!)}
+                                            src={galleryPreviews[i]!.startsWith('data:') || galleryPreviews[i]!.startsWith('blob:') ? galleryPreviews[i]! : getPublicImageUrl(galleryPreviews[i]!)}
                                             alt=""
                                             fill
                                             className="object-contain p-2"
                                             sizes="(max-width: 768px) 33vw, 150px"
                                           />
                                         ) : <span className="text-xl text-slate-300">+</span>}
+                                        <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover/gal:opacity-100 transition-opacity flex items-center justify-center">
+                                           <span className="text-[15px]">✂️</span>
+                                        </div>
                                      </div>
                                    ))}
                                 </div>
@@ -1261,7 +1465,7 @@ export default function AdminDashboard() {
                       <span className="text-2xl">📞</span>
                       <h4 className="text-xl font-black text-slate-900 dark:text-white">اطلاعات تماس و شبکه‌های اجتماعی</h4>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">شماره تماس اصلی</label>
                         <input value={siteSettings.contact.phone} onChange={e => handleCmsChange('contact', 'phone', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" />
@@ -1277,7 +1481,18 @@ export default function AdminDashboard() {
                           <input value={siteSettings.contact.instagram} onChange={e => handleCmsChange('contact', 'instagram', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl pl-6 pr-10 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" />
                         </div>
                       </div>
-                      <div className="md:col-span-3 space-y-2">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 mr-2">آیدی تلگرام</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+                          <input value={siteSettings.contact.telegram || ''} onChange={e => handleCmsChange('contact', 'telegram', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl pl-6 pr-10 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 mr-2">شماره واتس‌اپ</label>
+                        <input value={siteSettings.contact.whatsapp || ''} onChange={e => handleCmsChange('contact', 'whatsapp', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" placeholder="98914..." />
+                      </div>
+                      <div className="md:col-span-2 lg:col-span-3 space-y-2">
                         <label className="text-xs font-black text-slate-400 mr-2">آدرس فیزیکی</label>
                         <input value={siteSettings.contact.address} onChange={e => handleCmsChange('contact', 'address', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
                       </div>
@@ -1292,24 +1507,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-8">
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        <div className="lg:col-span-4 space-y-4">
-                          <label className="text-xs font-black text-slate-400 mr-2">تصویر اصلی (Hero)</label>
-                          <div onClick={() => document.getElementById('hero-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
-                            <input type="file" id="hero-up" className="hidden" accept="image/*" onChange={(e) => handleCmsFileUpload('hero', e)} />
-                            {previews.hero || siteSettings.home.heroImage ? (
-                              <Image
-                                src={previews.hero || getPublicImageUrl(siteSettings.home.heroImage)}
-                                alt=""
-                                fill
-                                className="object-cover"
-                                sizes="(max-width: 1024px) 100vw, 400px"
-                              />
-                            ) : (
-                              <span className="text-4xl">🖼️</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <label className="text-xs font-black text-slate-400 mr-2">عنوان بزرگ هیرو</label>
                             <input value={siteSettings.home.heroTitle} onChange={e => handleCmsChange('home', 'heroTitle', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
@@ -1325,6 +1523,28 @@ export default function AdminDashboard() {
                           <div className="space-y-2">
                             <label className="text-xs font-black text-slate-400 mr-2">لینک دکمه</label>
                             <input value={siteSettings.home.heroButtonLink} onChange={e => handleCmsChange('home', 'heroButtonLink', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" dir="ltr" />
+                          </div>
+                          <div className="md:col-span-2 space-y-2">
+                            <label className="text-xs font-black text-slate-400 mr-2">چیدمان بخش هیرو در دسکتاپ</label>
+                            <div className="flex gap-4">
+                              <button
+                                onClick={() => handleCmsChange('home', 'heroLayout', 'side-by-side')}
+                                className={`flex-1 h-14 rounded-2xl border-2 transition-all font-black text-xs sm:text-sm ${siteSettings.home.heroLayout !== 'stacked' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-transparent bg-slate-50 text-slate-400'}`}
+                              >
+                                نمایش کنار هم
+                              </button>
+                              <button
+                                onClick={() => handleCmsChange('home', 'heroLayout', 'stacked')}
+                                className={`flex-1 h-14 rounded-2xl border-2 transition-all font-black text-xs sm:text-sm ${siteSettings.home.heroLayout === 'stacked' ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-transparent bg-slate-50 text-slate-400'}`}
+                              >
+                                نمایش عمودی (اسلایدر بزرگ)
+                              </button>
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 mt-2 mr-2">
+                              {siteSettings.home.heroLayout === 'stacked'
+                                ? '💡 در این حالت اسلایدر و متن زیر هم قرار می‌گیرند و اسلایدر فضای بیشتری در دسکتاپ خواهد داشت.'
+                                : '💡 در این حالت اسلایدر در سمت چپ و متن در سمت راست به‌صورت متوازن نمایش داده می‌شوند.'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1584,16 +1804,37 @@ export default function AdminDashboard() {
                   <section className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
                     <div className="flex items-center gap-4 border-b border-slate-50 dark:border-slate-800 pb-6">
                       <span className="text-2xl">📄</span>
-                      <h4 className="text-xl font-black text-slate-900 dark:text-white">محتوای صفحات ثابت (بزودی)</h4>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white">محتوای صفحات ثابت و فوتر</h4>
                     </div>
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 mr-2">متن صفحه درباره ما</label>
-                        <textarea value={siteSettings.pages.aboutUs} onChange={e => handleCmsChange('pages', 'aboutUs', e.target.value)} rows={5} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 font-bold outline-none resize-none" />
+                    <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">متن درباره ما (فوتر)</label>
+                          <textarea value={siteSettings.footer.aboutText} onChange={e => handleCmsChange('footer', 'aboutText', e.target.value)} rows={3} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 font-bold outline-none resize-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">متن کپی‌رایت (فوتر)</label>
+                          <input value={siteSettings.footer.copyright} onChange={e => handleCmsChange('footer', 'copyright', e.target.value)} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold outline-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 mr-2">متن فوتر (About Section)</label>
-                        <textarea value={siteSettings.footer.aboutText} onChange={e => handleCmsChange('footer', 'aboutText', e.target.value)} rows={3} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 font-bold outline-none resize-none" />
+
+                      <div className="h-px bg-border w-full"></div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 mr-2">متن کامل صفحه «درباره ما»</label>
+                          <textarea value={siteSettings.pages.aboutUs} onChange={e => handleCmsChange('pages', 'aboutUs', e.target.value)} rows={6} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 font-bold outline-none resize-none border-2 border-transparent focus:border-indigo-600" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-2">
+                            <label className="text-xs font-black text-slate-400 mr-2">قوانین و مقررات</label>
+                            <textarea value={siteSettings.pages.rules || ''} onChange={e => handleCmsChange('pages', 'rules', e.target.value)} rows={4} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 font-bold outline-none resize-none border-2 border-transparent focus:border-indigo-600" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-black text-slate-400 mr-2">راهنمای خرید</label>
+                            <textarea value={siteSettings.pages.buyingGuide || ''} onChange={e => handleCmsChange('pages', 'buyingGuide', e.target.value)} rows={4} className="w-full bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 font-bold outline-none resize-none border-2 border-transparent focus:border-indigo-600" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </section>
@@ -1629,7 +1870,7 @@ export default function AdminDashboard() {
                           onChange={(e) => setBlogFilters(prev => ({ ...prev, search: e.target.value }))}
                           className="w-full h-12 bg-slate-50 dark:bg-slate-800 rounded-xl px-12 font-bold text-xs outline-none border-2 border-transparent focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-950 transition-all"
                         />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+                        <FiSearch className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 group-focus-within:opacity-100 transition-opacity" />
                       </div>
                     </div>
                     <div className="w-full sm:w-48 space-y-2">
@@ -1731,7 +1972,7 @@ export default function AdminDashboard() {
                                 <div className="absolute right-0 top-full mt-2 w-full p-4 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 opacity-0 group-focus-within:opacity-100 transition-opacity z-10 pointer-events-none">
                                    <p className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 leading-relaxed">
                                       📌 **نامک چیست؟** آدرس اینترنتی مقاله شماست.
-                                      <br/>مثال: برای مقاله‌ای با عنوان "راهنمای خرید لپ‌تاپ"، نامک بهتر است `buying-laptop-guide` باشد.
+                                      <br/>مثال: برای مقاله‌ای با عنوان &quot;راهنمای خرید لپ‌تاپ&quot;، نامک بهتر است `buying-laptop-guide` باشد.
                                       <br/>**قوانین:** فقط حروف انگلیسی، اعداد و خط تیره (-) مجاز است. فاصله نگذارید.
                                    </p>
                                 </div>
@@ -1780,7 +2021,7 @@ export default function AdminDashboard() {
                                                <span className="text-xs font-bold text-slate-800 dark:text-white font-black">متن ضخیم</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4">
-                                               <code className="text-[10px] bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">&lt;a href="لینک"&gt;متن&lt;/a&gt;</code>
+                                               <code className="text-[10px] bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">&lt;a href=&quot;لینک&quot;&gt;متن&lt;/a&gt;</code>
                                                <span className="text-xs font-bold text-indigo-500 underline">لینک دادن</span>
                                             </div>
                                          </div>
@@ -1808,7 +2049,7 @@ export default function AdminDashboard() {
                                                <span className="text-[10px] font-bold text-slate-500">باکس نقل‌قول</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4">
-                                               <code className="text-[10px] bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">&lt;img src="آدرس" /&gt;</code>
+                                               <code className="text-[10px] bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">&lt;img src=&quot;آدرس&quot; /&gt;</code>
                                                <span className="text-[10px] font-bold text-slate-500">درج تصویر داخلی</span>
                                             </div>
                                          </div>
@@ -1822,18 +2063,26 @@ export default function AdminDashboard() {
                         {/* Left Side: Settings & Sidebar */}
                         <div className="lg:col-span-4 space-y-8">
                            <div className="space-y-4">
-                              <label className="text-xs font-black text-slate-400 mr-2">تصویر شاخص</label>
-                              <div onClick={() => document.getElementById('post-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                              <div className="flex flex-col gap-1 mr-2">
+                                 <label className="text-xs font-black text-slate-400">تصویر شاخص مقاله</label>
+                                 <p className="text-[9px] font-bold text-indigo-500 leading-relaxed">
+                                    سایز پیشنهادی: ۸۰۰x۵۰۰ (۱۶:۹) • حداکثر ۲ مگابایت • WebP/JPG/PNG
+                                 </p>
+                              </div>
+                              <div onClick={() => document.getElementById('post-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden group/post">
                                  <input type="file" id="post-up" className="hidden" accept="image/*" onChange={handlePostImageChange} />
                                  {postImagePreview ? (
                                    <Image
-                                     src={postImagePreview.startsWith('data:') ? postImagePreview : getPublicImageUrl(postImagePreview)}
+                                     src={postImagePreview.startsWith('data:') || postImagePreview.startsWith('blob:') ? postImagePreview : getPublicImageUrl(postImagePreview)}
                                      alt=""
                                      fill
                                      className="object-cover"
                                      sizes="(max-width: 768px) 100vw, 400px"
                                    />
                                  ) : <span className="text-4xl">📸</span>}
+                                 <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover/post:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="bg-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg border border-indigo-100">تغییر و کادربندی</span>
+                                 </div>
                               </div>
                            </div>
 
@@ -1911,6 +2160,220 @@ export default function AdminDashboard() {
             {/* LEDGER TAB */}
             {activeTab === 'ledger' && (
               <LedgerManager />
+            )}
+
+            {/* TICKETS TAB */}
+            {activeTab === 'tickets' && (
+              <TicketManager
+                initialUserId={selectedUserIdForTickets}
+                initialTicketId={selectedTicketIdForTickets}
+              />
+            )}
+
+            {/* SLIDER TAB */}
+            {activeTab === 'slider' && (
+              <div className="space-y-10 animate-fade-in">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-estedad text-slate-900 dark:text-white">مدیریت اسلایدر هیرو</h3>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">اسلایدهای بخش بالای صفحه اصلی را از اینجا مدیریت کنید.</p>
+                  </div>
+                  {!isAddingSlide && (
+                    <button onClick={() => { setIsAddingSlide(true); setEditingSlide(null); setSlideImagePreview(null); setSlideMobileImagePreview(null); }} className="w-full sm:w-auto h-14 sm:h-16 px-10 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl hover:scale-105 transition-all">
+                      + افزودن اسلاید جدید
+                    </button>
+                  )}
+                </div>
+
+                {!isAddingSlide ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...slides].sort((a, b) => b.priority - a.priority).map((slide, index) => (
+                      <div key={slide.id} className={`p-6 rounded-[2.5rem] bg-white dark:bg-slate-900 border ${slide.isActive ? 'border-indigo-500 shadow-lg' : 'border-slate-100 dark:border-slate-800'} relative flex flex-col gap-4`}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                              جایگاه {index + 1}
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-400 mr-2">اولویت: {slide.priority}</span>
+                          </div>
+                          <button
+                            onClick={() => handleToggleSlide(slide.id, !slide.isActive)}
+                            className={`text-[10px] font-black px-3 py-1 rounded-full transition-colors ${
+                              slide.isActive ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {slide.isActive ? 'فعال' : 'غیرفعال'}
+                          </button>
+                        </div>
+
+                        <div className="aspect-[16/9] rounded-2xl bg-slate-50 dark:bg-slate-950 overflow-hidden relative border border-slate-100 dark:border-slate-800">
+                          {slide.image ? (
+                            <Image src={getPublicImageUrl(slide.image)} alt="" fill className="object-cover" sizes="300px" />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-slate-300 text-2xl">🖼️</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="font-black text-slate-900 dark:text-white line-clamp-1">{slide.title || 'بدون عنوان'}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{slide.subtitle || 'بدون زیرعنوان'}</p>
+                        </div>
+
+                        <div className="flex justify-end items-center mt-auto pt-4 border-t border-slate-50 dark:border-slate-800 gap-2">
+                            <button onClick={() => handleEditSlide(slide)} className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center hover:bg-indigo-50 transition-colors text-lg">✏️</button>
+                            <button onClick={() => handleDeleteSlide(slide.id, slide.image, slide.mobileImage)} className="h-10 w-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors text-lg">🗑️</button>
+                        </div>
+                      </div>
+                    ))}
+                    {slides.length === 0 && (
+                      <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] text-slate-400 italic">
+                        هیچ اسلایدی ثبت نشده است.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 sm:p-12 shadow-xl animate-fade-in">
+                    <form onSubmit={handleSlideSubmit} className="space-y-10">
+                      <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-800 pb-8">
+                         <h4 className="text-2xl font-black text-slate-900 dark:text-white">{editingSlide ? 'ویرایش اسلاید' : 'ایجاد اسلاید جدید'}</h4>
+                         <button type="button" onClick={() => { setIsAddingSlide(false); setEditingSlide(null); }} className="h-12 px-8 rounded-2xl bg-slate-50 text-slate-500 font-black text-xs">انصراف</button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                        <div className="lg:col-span-8 space-y-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">عنوان اسلاید</label>
+                              <input name="title" defaultValue={editingSlide?.title || ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-black text-base border-2 border-transparent focus:border-indigo-600 outline-none" placeholder="عنوان اصلی..." />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">زیرعنوان</label>
+                              <input name="subtitle" defaultValue={editingSlide?.subtitle || ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" placeholder="توضیح کوتاه..." />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">متن دکمه (CTA)</label>
+                              <input name="ctaText" defaultValue={editingSlide?.ctaText || ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" placeholder="مثلاً: مشاهده محصولات" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">لینک دکمه (URL)</label>
+                              <input name="link" defaultValue={editingSlide?.link || ''} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" dir="ltr" placeholder="/shop" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">اولویت نمایش (بزرگتر = بالاتر)</label>
+                              <input type="number" name="priority" defaultValue={editingSlide?.priority || 0} className="w-full h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl px-6 font-bold text-sm border-2 border-transparent focus:border-indigo-600 outline-none" />
+                            </div>
+                            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 h-14 mt-6">
+                               <input type="checkbox" name="isActive" id="slide-active" defaultChecked={editingSlide ? editingSlide.isActive : true} className="w-5 h-5 rounded-lg border-2 border-slate-300 checked:bg-indigo-600 transition-all" />
+                               <label htmlFor="slide-active" className="text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer">فعال باشد</label>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">رنگ متن اسلاید</label>
+                              <div className="flex gap-3 items-center">
+                                <input type="color" name="textColor" defaultValue={editingSlide?.textColor || '#ffffff'} className="h-14 w-20 bg-slate-50 dark:bg-slate-800 rounded-2xl p-1 cursor-pointer border-2 border-transparent focus:border-indigo-600 outline-none" />
+                                <span className="text-[10px] font-bold text-slate-400">پیش‌فرض: سفید (#ffffff)</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 mr-2">رنگ دکمه اسلاید</label>
+                              <div className="flex gap-3 items-center">
+                                <input type="color" name="buttonColor" defaultValue={editingSlide?.buttonColor || '#4f46e5'} className="h-14 w-20 bg-slate-50 dark:bg-slate-800 rounded-2xl p-1 cursor-pointer border-2 border-transparent focus:border-indigo-600 outline-none" />
+                                <span className="text-[10px] font-bold text-slate-400">پیش‌فرض: بنفش (#4f46e5)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-4 space-y-8">
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-1 mr-2">
+                               <label className="text-xs font-black text-slate-400">تصویر دسکتاپ (الزامی)</label>
+                               <span className="text-[10px] font-bold text-indigo-500">سایز پیشنهادی: ۱۹۲۰x۸۰۰ پیکسل</span>
+                            </div>
+                            <div onClick={() => document.getElementById('slide-img-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                              <input type="file" id="slide-img-up" name="image" className="hidden" accept="image/*" onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setSlideImagePreview(reader.result as string);
+                                  reader.readAsDataURL(file);
+                                }
+                              }} />
+                              {slideImagePreview ? (
+                                <Image src={slideImagePreview.startsWith('data:') ? slideImagePreview : getPublicImageUrl(slideImagePreview)} alt="" fill className="object-cover" />
+                              ) : (
+                                <div className="text-center space-y-2">
+                                   <span className="text-4xl block">📸</span>
+                                   <span className="text-[10px] font-black text-slate-300">انتخاب تصویر دسکتاپ</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-1 mr-2">
+                               <label className="text-xs font-black text-slate-400">تصویر موبایل (اختیاری)</label>
+                               <span className="text-[10px] font-bold text-indigo-500">سایز پیشنهادی: ۸۰۰x۱۲۰۰ پیکسل</span>
+                            </div>
+                            <div onClick={() => document.getElementById('slide-mob-img-up')?.click()} className="aspect-[9/16] w-32 mx-auto rounded-2xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
+                              <input type="file" id="slide-mob-img-up" name="mobileImage" className="hidden" accept="image/*" onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => setSlideMobileImagePreview(reader.result as string);
+                                  reader.readAsDataURL(file);
+                                }
+                              }} />
+                              {slideMobileImagePreview ? (
+                                <Image src={slideMobileImagePreview.startsWith('data:') ? slideMobileImagePreview : getPublicImageUrl(slideMobileImagePreview)} alt="" fill className="object-cover" />
+                              ) : (
+                                <div className="text-center space-y-2">
+                                   <span className="text-2xl block">📱</span>
+                                   <span className="text-[9px] font-black text-slate-300">تصویر موبایل</span>
+                                </div>
+                              )}
+                            </div>
+                            {slideMobileImagePreview && (
+                              <button type="button" onClick={() => { setSlideMobileImagePreview(null); const input = document.getElementById('slide-mob-img-up') as HTMLInputElement; if(input) input.value = ''; }} className="w-full text-[10px] font-black text-red-500 text-center">حذف تصویر موبایل</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col-reverse sm:flex-row justify-end gap-4 pt-10 border-t border-slate-50 dark:border-slate-800">
+                        <button type="button" onClick={() => { setIsAddingSlide(false); setEditingSlide(null); }} className="h-14 px-12 rounded-2xl font-black text-slate-400">انصراف</button>
+                        <button type="submit" disabled={isSubmitting} className="h-14 px-16 rounded-2xl bg-indigo-600 text-white font-black text-base shadow-xl disabled:bg-slate-300">
+                           {isSubmitting ? 'در حال ثبت...' : (editingSlide ? 'بروزرسانی اسلاید' : 'انتشار اسلاید')}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* USERS TAB */}
+            {activeTab === 'users' && (
+              <UserManager
+                onShowUserTickets={(userId) => {
+                  setSelectedUserIdForTickets(userId);
+                  setSelectedTicketIdForTickets(undefined);
+                  setActiveTab('tickets');
+                }}
+                onShowTicket={(userId, ticketId) => {
+                  setSelectedUserIdForTickets(userId);
+                  setSelectedTicketIdForTickets(ticketId);
+                  setActiveTab('tickets');
+                }}
+              />
             )}
 
             {/* ANNOUNCEMENTS TAB */}
@@ -2053,7 +2516,10 @@ export default function AdminDashboard() {
 
                         <div className="lg:col-span-4 space-y-8">
                           <div className="space-y-4">
-                            <label className="text-xs font-black text-slate-400 mr-2">تصویر اعلان</label>
+                            <div className="flex flex-col gap-1 mr-2">
+                               <label className="text-xs font-black text-slate-400">تصویر اعلان</label>
+                               <span className="text-[10px] font-bold text-indigo-500">سایز پیشنهادی: ۱۲۰۰x۶۷۵ پیکسل (۱۶:۹)</span>
+                            </div>
                             <div onClick={() => document.getElementById('ann-img-up')?.click()} className="aspect-video rounded-3xl border-4 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 cursor-pointer hover:border-indigo-600 transition-all relative overflow-hidden">
                               <input type="file" id="ann-img-up" name="image" className="hidden" accept="image/*" onChange={(e) => {
                                 const file = e.target.files?.[0];
@@ -2064,9 +2530,18 @@ export default function AdminDashboard() {
                                 }
                               }} />
                               {announcementImagePreview ? (
-                                <Image src={announcementImagePreview} alt="" fill className="object-cover" />
+                                <Image
+                                  src={announcementImagePreview.startsWith('data:') ? announcementImagePreview : getPublicImageUrl(announcementImagePreview)}
+                                  alt=""
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 1024px) 100vw, 400px"
+                                />
                               ) : (
-                                <span className="text-4xl">📸</span>
+                                <div className="text-center space-y-2">
+                                   <span className="text-4xl block">📸</span>
+                                   <span className="text-[10px] font-black text-slate-300">انتخاب تصویر اعلان</span>
+                                </div>
                               )}
                             </div>
                             {announcementImagePreview && (
@@ -2217,6 +2692,16 @@ export default function AdminDashboard() {
         excludeIds={featuredProducts.filter(p => p.isFeatured).map(p => p.id)}
         title="انتخاب محصول برای ویترین پیشنهادی"
       />
+
+      {cropModal.isOpen && (
+        <ImageCropModal
+          image={cropModal.image}
+          aspect={cropModal.aspect}
+          title={cropModal.title}
+          onClose={() => setCropModal(prev => ({ ...prev, isOpen: false }))}
+          onCropComplete={cropModal.onComplete}
+        />
+      )}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
